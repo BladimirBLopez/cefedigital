@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/boda/:slug", "destination": "/api/boda/:slug" }
+  ]
+}

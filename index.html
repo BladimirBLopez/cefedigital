@@ -412,10 +412,13 @@ function formatFecha(iso){
 }
 
 // ---------- DETALLE EVENTO ----------
+const CARPETA_TIPO = { boda:"boda", xv:"xv", cumple:"cumple", babyshower:"babyshower" };
+
 function openEvent(ev){
   currentEvent = ev;
   document.getElementById("d_titulo").textContent = ev.nombres;
-  const url = `${location.origin}${location.pathname.replace('index.html','')}invitacion/${ev.slug}`;
+  const carpeta = CARPETA_TIPO[ev.tipo] || "invitacion";
+  const url = `${location.origin}${location.pathname.replace('index.html','')}${carpeta}/${ev.slug}`;
   document.getElementById("d_link").textContent = url;
   showDetail();
   switchTab("invitados");
