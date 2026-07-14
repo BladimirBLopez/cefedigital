@@ -119,6 +119,7 @@ ${foto ? `<meta name="twitter:image" content="${foto}">` : ""}
     -webkit-font-smoothing:antialiased;
     overflow-x:hidden;
   }
+  body.bloqueado{overflow:hidden;height:100vh;}
   section{padding:60px 24px;max-width:560px;margin:0 auto;text-align:center;}
   section h2{
     font-size:22px;font-weight:400;color:var(--accent);margin-bottom:18px;
@@ -268,7 +269,7 @@ ${foto ? `<meta name="twitter:image" content="${foto}">` : ""}
   footer{text-align:center;padding:34px 24px 60px;font-size:11px;color:#666;font-family:sans-serif;}
 </style>
 </head>
-<body>
+<body class="bloqueado">
 
 <!-- ===== PANTALLA DE ENTRADA ===== -->
 <div id="entrada">
@@ -276,7 +277,7 @@ ${foto ? `<meta name="twitter:image" content="${foto}">` : ""}
   <h1>${nombre1}</h1>
   <div class="amp">&amp;</div>
   <h1>${nombre2}</h1>
-  <button onclick="document.getElementById('entrada').classList.add('oculto')">Ver invitación</button>
+  <button onclick="document.getElementById('entrada').classList.add('oculto'); document.body.classList.remove('bloqueado');">Ver invitación</button>
 </div>
 
 <!-- ===== HERO ===== -->
