@@ -147,6 +147,17 @@
       <label>Nombre(s) del homenajeado/a</label>
       <input type="text" id="f_nombres" placeholder="Ej: Luis Miguel &amp; Aracely">
 
+      <div id="plantillaBodaBox">
+        <label>Plantilla</label>
+        <select id="f_plantilla_boda">
+          <option value="eternal">Eternal — Elegante oscuro (negro + ámbar)</option>
+          <option value="romance">Romance — Suave romántico (blush + dorado)</option>
+          <option value="vintage">Vintage — Clásico retro (sepia + crema)</option>
+          <option value="boho">Boho — Natural terracota (tierra + verde salvia)</option>
+          <option value="clasica">Clásica — Formal (blanco/negro + dorado)</option>
+        </select>
+      </div>
+
       <label>Enlace personalizado (slug)</label>
       <input type="text" id="f_slug" placeholder="luis-aracely">
 
@@ -318,6 +329,10 @@ function showDetail(){
 }
 
 // ---------- SLUG AUTO ----------
+document.getElementById("f_tipo").addEventListener("change", (e) => {
+  document.getElementById("plantillaBodaBox").classList.toggle("hidden", e.target.value !== "boda");
+});
+
 document.getElementById("f_nombres").addEventListener("input", (e) => {
   const slugField = document.getElementById("f_slug");
   if (!slugField.dataset.touched){
@@ -352,7 +367,10 @@ async function crearEvento(){
   errBox.textContent = ""; okBox.classList.add("hidden");
 
   const tipo = document.getElementById("f_tipo").value;
-  const plantillas = {boda:"eternal", xv:"quinceañera-glam", cumple:"fiesta", babyshower:"ternura"};
+  const plantillasDefault = {boda:"eternal", xv:"quinceañera-glam", cumple:"fiesta", babyshower:"ternura"};
+  const plantillaElegida = tipo === "boda"
+    ? document.getElementById("f_plantilla_boda").value
+    : plantillasDefault[tipo];
   const nombres = document.getElementById("f_nombres").value.trim();
   const slug = document.getElementById("f_slug").value.trim();
   const fecha = document.getElementById("f_fecha").value;
@@ -419,7 +437,7 @@ async function crearEvento(){
     const { data, error } = await sb.from("eventos").insert({
       slug,
       tipo,
-      plantilla: plantillas[tipo],
+      plantilla: plantillaElegida,
       nombres,
       fecha_evento: hora ? `${fecha}T${hora}:00` : `${fecha}T00:00:00`,
       lugar_ceremonia: lugarCeremonia || null,
