@@ -161,15 +161,44 @@
         </div>
       </div>
 
-      <label>Lugar / dirección</label>
-      <input type="text" id="f_lugar" placeholder="Salón de Eventos, Av. Santa Cruz">
+      <label>Mensaje / versículo</label>
+      <textarea id="f_mensaje" placeholder="Así que no son ya más dos sino una sola carne..."></textarea>
 
-      <label>Link de Google Maps (opcional)</label>
+      <h3 style="margin-top:30px;color:#F5A623;font-size:15px;">💒 Ceremonia</h3>
+      <label>Lugar (ej: Catedral de San Sebastián)</label>
+      <input type="text" id="f_lugar_ceremonia" placeholder="Catedral de San Sebastián">
+      <label>Hora</label>
+      <input type="time" id="f_hora_ceremonia">
+      <label>Dirección</label>
+      <input type="text" id="f_direccion_ceremonia" placeholder="Calle Aniceto Arze esq. Plaza 14 de Septiembre">
+      <label>Link de Google Maps</label>
+      <input type="url" id="f_mapa_ceremonia" placeholder="https://maps.app.goo.gl/...">
+
+      <h3 style="margin-top:30px;color:#F5A623;font-size:15px;">🥂 Recepción</h3>
+      <label>Lugar (ej: Salón de Eventos)</label>
+      <input type="text" id="f_lugar" placeholder="Salón de Eventos">
+      <label>Hora</label>
+      <input type="time" id="f_hora_recepcion">
+      <label>Dirección</label>
+      <input type="text" id="f_direccion_recepcion" placeholder="Avenida Santa Cruz">
+      <label>Link de Google Maps</label>
       <input type="url" id="f_mapa" placeholder="https://maps.app.goo.gl/...">
 
-      <label>Mensaje / frase especial</label>
-      <textarea id="f_mensaje" placeholder="Ej: versículo, frase de bienvenida..."></textarea>
+      <h3 style="margin-top:30px;color:#F5A623;font-size:15px;">👨‍👩‍👧 Padres</h3>
+      <div class="row2">
+        <div><label>Padre del novio</label><input type="text" id="f_padre_novio"></div>
+        <div><label>Madre del novio</label><input type="text" id="f_madre_novio"></div>
+      </div>
+      <div class="row2">
+        <div><label>Padre de la novia</label><input type="text" id="f_padre_novia"></div>
+        <div><label>Madre de la novia</label><input type="text" id="f_madre_novia"></div>
+      </div>
 
+      <h3 style="margin-top:30px;color:#F5A623;font-size:15px;">🕐 Protocolo</h3>
+      <label>Un evento por línea, formato: Hora - Actividad</label>
+      <textarea id="f_protocolo" placeholder="18:30 - Ceremonia Religiosa&#10;20:00 - Recepción Social&#10;20:30 - Vals y Brindis&#10;21:30 - Cena&#10;22:00 - A Bailar&#10;03:00 - Fin de la Fiesta"></textarea>
+
+      <h3 style="margin-top:30px;color:#F5A623;font-size:15px;">👗 Detalles finales</h3>
       <label>Código de vestimenta (opcional)</label>
       <input type="text" id="f_vestimenta" placeholder="Formal, casual elegante...">
 
@@ -181,9 +210,12 @@
       <label>Color principal</label>
       <input type="text" id="f_color" value="#F5A623">
 
-      <label>Foto principal</label>
+      <label>Foto principal (portada)</label>
       <input type="file" id="f_foto" accept="image/*">
       <img id="fotoPreview" class="photo-preview hidden">
+
+      <label>Galería de fotos (elige varias)</label>
+      <input type="file" id="f_galeria" accept="image/*" multiple>
 
       <button class="primary" id="createBtn" onclick="crearEvento()">Crear invitación</button>
       <div id="createErr" class="err"></div>
@@ -325,13 +357,35 @@ async function crearEvento(){
   const slug = document.getElementById("f_slug").value.trim();
   const fecha = document.getElementById("f_fecha").value;
   const hora = document.getElementById("f_hora").value;
-  const lugar = document.getElementById("f_lugar").value.trim();
-  const mapa = document.getElementById("f_mapa").value.trim();
   const mensaje = document.getElementById("f_mensaje").value.trim();
   const vestimenta = document.getElementById("f_vestimenta").value.trim();
   const adultos = document.getElementById("f_adultos").checked;
   const color = document.getElementById("f_color").value.trim() || "#F5A623";
   const fotoFile = document.getElementById("f_foto").files[0];
+  const galeriaFiles = Array.from(document.getElementById("f_galeria").files || []);
+
+  const lugarCeremonia = document.getElementById("f_lugar_ceremonia").value.trim();
+  const horaCeremonia = document.getElementById("f_hora_ceremonia").value;
+  const direccionCeremonia = document.getElementById("f_direccion_ceremonia").value.trim();
+  const mapaCeremonia = document.getElementById("f_mapa_ceremonia").value.trim();
+
+  const lugar = document.getElementById("f_lugar").value.trim();
+  const horaRecepcion = document.getElementById("f_hora_recepcion").value;
+  const direccionRecepcion = document.getElementById("f_direccion_recepcion").value.trim();
+  const mapa = document.getElementById("f_mapa").value.trim();
+
+  const padreNovio = document.getElementById("f_padre_novio").value.trim();
+  const madreNovio = document.getElementById("f_madre_novio").value.trim();
+  const padreNovia = document.getElementById("f_padre_novia").value.trim();
+  const madreNovia = document.getElementById("f_madre_novia").value.trim();
+
+  const protocoloTexto = document.getElementById("f_protocolo").value.trim();
+  const protocolo = protocoloTexto
+    ? protocoloTexto.split("\n").map(l => l.trim()).filter(Boolean).map(linea => {
+        const [h, ...resto] = linea.split(" - ");
+        return { hora: h.trim(), texto: resto.join(" - ").trim() };
+      })
+    : [];
 
   if (!nombres || !slug || !fecha){
     errBox.textContent = "Nombre, enlace y fecha son obligatorios.";
@@ -352,20 +406,43 @@ async function crearEvento(){
       fotoUrl = pub.publicUrl;
     }
 
+    const galeriaUrls = [];
+    for (const file of galeriaFiles){
+      const ext = file.name.split(".").pop();
+      const path = `${slug}/galeria-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
+      galeriaUrls.push(pub.publicUrl);
+    }
+
     const { data, error } = await sb.from("eventos").insert({
       slug,
       tipo,
       plantilla: plantillas[tipo],
       nombres,
       fecha_evento: hora ? `${fecha}T${hora}:00` : `${fecha}T00:00:00`,
+      lugar_ceremonia: lugarCeremonia || null,
+      hora_ceremonia: horaCeremonia || null,
+      direccion_ceremonia: direccionCeremonia || null,
+      mapa_ceremonia_url: mapaCeremonia || null,
       lugar_recepcion: lugar || null,
-      hora_recepcion: hora || null,
+      hora_recepcion: horaRecepcion || null,
+      direccion_recepcion: direccionRecepcion || null,
       mapa_recepcion_url: mapa || null,
       mensaje: mensaje || null,
       codigo_vestimenta: vestimenta || null,
       solo_adultos: adultos,
       color_primario: color,
-      foto_hero: fotoUrl
+      foto_hero: fotoUrl,
+      fotos_galeria: galeriaUrls.length ? galeriaUrls : null,
+      detalles: {
+        padre_novio: padreNovio || null,
+        madre_novio: madreNovio || null,
+        padre_novia: padreNovia || null,
+        madre_novia: madreNovia || null,
+        protocolo
+      }
     }).select().single();
 
     if (error) throw error;
@@ -484,6 +561,5 @@ async function agregarInvitado(){
   loadGuests();
 }
 </script>
-<p>hola</p>
 </body>
 </html>
