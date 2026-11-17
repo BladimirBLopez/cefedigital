@@ -74,6 +74,7 @@ export default async function Pedido({ params }) {
           <div className="rounded-2xl bg-white border border-esmeralda shadow-sm p-5">
             {entregas.length > 0 && <h2 className="font-semibold mb-3 text-marino">Tus claves y cuentas</h2>}
             {hayRecarga && <p className="text-sm font-semibold text-marino mb-2">Tu recarga fue realizada. Si no la ves en tu juego, escríbenos por WhatsApp.</p>}
+            {entregas.length === 0 && !hayRecarga && <p className="text-sm font-semibold text-marino mb-2">Tu pedido fue entregado. Te enviamos tu clave o cuenta por WhatsApp. Si no te llegó, escríbenos.</p>}
             <ul className="space-y-2">
               {entregas.map((e) => (
                 <li key={e.id} className="rounded-xl bg-neutral-100 px-4 py-3">
@@ -83,7 +84,7 @@ export default async function Pedido({ params }) {
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-neutral-500 mt-3">Mantén presionado para copiar. No compartas este enlace con nadie.</p>
+            {entregas.length > 0 && <p className="text-xs text-neutral-500 mt-3">Mantén presionado para copiar. No compartas este enlace con nadie.</p>}
           </div>
         )}
 
