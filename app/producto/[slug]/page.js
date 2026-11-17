@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
+import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 import { crearPedido } from "@/app/tienda-actions";
 
 export const dynamic = "force-dynamic";
@@ -26,21 +27,23 @@ export default async function Producto({ params, searchParams }) {
     <>
       <TiendaHeader nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <Link href="/" className="text-sm text-neutral-400">← Volver a la tienda</Link>
+        <Link href="/" className="text-sm font-medium text-marino hover:text-intenso">← Volver a la tienda</Link>
         <div className="mt-4 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
-          {p.imagen_url && <img src={p.imagen_url} alt={p.nombre} className="w-full max-h-72 object-cover rounded-xl mb-4" />}
-          {p.categoria && <p className="text-xs text-acento">{p.categoria}</p>}
-          <h1 className="text-xl font-semibold mt-1">{p.nombre}</h1>
-          <p className="text-2xl font-semibold mt-3">Bs {p.precio.toFixed(2)}</p>
+          {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} className="w-full max-h-72 object-cover rounded-xl mb-4" /> : <div className="w-full h-40 rounded-xl mb-4 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
+          {p.categoria && <span className="inline-block rounded-full bg-turquesa/25 text-marino text-xs font-medium px-2.5 py-0.5">{p.categoria}</span>}
+          <h1 className="text-2xl font-bold mt-2">{p.nombre}</h1>
+          <p className="text-3xl font-bold text-intenso mt-3">Bs {p.precio.toFixed(2)}</p>
           {p.descripcion && <p className="text-sm text-neutral-600 mt-3 whitespace-pre-line">{p.descripcion}</p>}
-          <p className="text-xs text-neutral-400 mt-3">Entrega después de confirmar tu pago</p>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-marino">{[[FiZap, "Entrega rápida"], [FiMessageCircle, "Por WhatsApp"], [FiShield, "Garantía"]].map(([I, t]) => (<div key={t} className="rounded-xl bg-neutral-50 border border-neutral-200 py-2"><I className="mx-auto mb-1 h-4 w-4 text-electrico" />{t}</div>))}</div>
+          <p className="text-xs text-neutral-500 mt-3">Entrega después de confirmar tu pago</p>
         </div>
 
         {max === 0 ? (
           <p className="mt-6 text-center text-neutral-400">Producto agotado por ahora.</p>
         ) : (
           <form action={crearPedido} className="mt-6 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
-            <h2 className="font-semibold">Hacer mi pedido</h2>
+            <h2 className="text-lg font-bold">Hacer mi pedido</h2>
+            <p className="text-xs text-neutral-500">Llena tus datos y te escribimos por WhatsApp cuando confirmemos tu pago.</p>
             <input type="hidden" name="producto_id" value={p.id} />
             <input type="hidden" name="slug" value={p.slug} />
             <input name="nombre" required maxLength={80} placeholder="Tu nombre" className={campo} />
