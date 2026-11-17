@@ -17,12 +17,11 @@ export async function crearPedido(formData) {
 
   const [p] = await sql`
     select p.id, p.slug, p.tipo, p.campo_cliente, p.precio::float as precio,
-      (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
+      99 as disponibles
     from productos p where p.id = ${productoId} and p.activo`;
   if (!p) redirect("/");
   const dato = String(formData.get("dato_cliente") || "").trim().slice(0, 100);
   if (p.tipo === "recarga" && p.campo_cliente && !dato) redirect(`/producto/${p.slug}?error=dato`);
-  if (p.tipo !== "recarga" && p.disponibles < cantidad) redirect(`/producto/${p.slug}?error=stock`);
 
   const ip = await ipCliente();
   if ((await contar("pedido_ip", ip, 60)) >= 8 || (await contar("pedido_wa", whatsapp, 60)) >= 4) redirect(`/producto/${p.slug}?error=limite`);

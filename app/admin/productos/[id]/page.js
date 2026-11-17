@@ -15,6 +15,7 @@ const ERRORES = {
   nombre: "Falta el nombre",
   precio: "El precio no es válido",
   vence: "La fecha de vencimiento no es válida",
+  duracion: "La duración debe ser un número de días (1 o más)",
   foto: "No se pudo subir la foto (máx. 4 MB)",
   imagen: "La imagen debe empezar con https://",
 };
@@ -28,7 +29,7 @@ export default async function EditarProducto({ params, searchParams }) {
   if (!Number.isInteger(id)) notFound();
   const r = await sql`
     select id, nombre, categoria, descripcion, precio::float as precio, imagen_url,
-           instrucciones, tipo, campo_cliente, vence::text as vence, activo
+           instrucciones, tipo, campo_cliente, vence::text as vence, duracion_dias, activo
     from productos where id = ${id}`;
   const p = r[0];
   if (!p) notFound();
@@ -67,6 +68,10 @@ export default async function EditarProducto({ params, searchParams }) {
           <label className="block text-xs text-neutral-500">
             Fecha de vencimiento (vacío = no vence)
             <input name="vence" type="date" defaultValue={p.vence || ""} className={campo + " mt-1"} />
+          </label>
+          <label className="block text-xs text-neutral-500">
+            Duración del servicio en días (ej: 30; vacío = no avisa)
+            <input name="duracion_dias" inputMode="numeric" defaultValue={p.duracion_dias || ""} className={campo + " mt-1"} />
           </label>
           <textarea name="descripcion" rows={2} defaultValue={p.descripcion || ""} placeholder="Descripción" className={campo} />
           <textarea

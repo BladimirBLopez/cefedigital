@@ -16,11 +16,11 @@ export default async function Producto({ params, searchParams }) {
   const aj = await obtenerAjustes();
   const [p] = await sql`
     select p.id, p.slug, p.nombre, p.categoria, p.descripcion, p.imagen_url, p.tipo, p.campo_cliente, p.precio::float as precio,
-      (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
+      99 as disponibles
     from productos p where p.slug = ${slug} and p.activo`;
   if (!p) notFound();
   const esRecarga = p.tipo === "recarga";
-  const max = esRecarga ? 5 : Math.min(5, p.disponibles);
+  const max = 5;
 
   return (
     <>

@@ -42,11 +42,14 @@ function leerProducto(formData) {
       : null;
   const venceTxt = String(formData.get("vence") || "").trim();
   const vence = venceTxt && esFecha(venceTxt) ? venceTxt : null;
+  const durTxt = String(formData.get("duracion_dias") || "").trim();
+  const duracion = durTxt ? Number(durTxt) : null;
   let error = null;
   if (!nombre) error = "nombre";
   else if (!Number.isFinite(precio) || precio < 0) error = "precio";
   else if (venceTxt && !vence) error = "vence";
-  return { nombre, categoria, descripcion, precio, instrucciones, tipo, campoCliente, vence, error };
+  else if (durTxt && (!Number.isInteger(duracion) || duracion < 1 || duracion > 3650)) error = "duracion";
+  return { nombre, categoria, descripcion, precio, instrucciones, tipo, campoCliente, vence, duracion, error };
 }
 
 export async function salir() {
@@ -165,7 +168,7 @@ export async function editarProducto(formData) {
 
   const antesFilas = await sql`
     select nombre, categoria, descripcion, precio::float as precio, imagen_url,
-           instrucciones, tipo, campo_cliente, vence::text as vence
+           instrucciones, tipo, campo_cliente, vence::text as vence, duracion_dias
     from productos where id = ${id}`;
   const antes = antesFilas[0] || null;
 
@@ -173,18 +176,18 @@ export async function editarProducto(formData) {
     update productos
     set nombre = ${p.nombre}, categoria = ${p.categoria}, descripcion = ${p.descripcion},
         precio = ${p.precio}, imagen_url = ${imagen}, instrucciones = ${p.instrucciones},
-        tipo = ${p.tipo}, campo_cliente = ${p.campoCliente}, vence = ${p.vence}
+        tipo = ${p.tipo}, campo_cliente = ${p.campoCliente}, vence = ${p.vence}, duracion_dias = ${p.duracion}
     where id = ${id}`;
 
   const nuevo = {
     nombre: p.nombre, categoria: p.categoria, descripcion: p.descripcion, precio: p.precio,
     imagen_url: imagen, instrucciones: p.instrucciones, tipo: p.tipo,
-    campo_cliente: p.campoCliente, vence: p.vence,
+    campo_cliente: p.campoCliente, vence: p.vence, duracion_dias: p.duracion,
   };
   const etiqueta = {
     nombre: "nombre", categoria: "categoría", descripcion: "descripción", precio: "precio",
     imagen_url: "imagen", instrucciones: "instrucciones", tipo: "tipo",
-    campo_cliente: "campo del cliente", vence: "vencimiento",
+    campo_cliente: "campo del cliente", vence: "vencimiento", duracion_dias: "duración en días",
   };
   const cambios = [];
   for (const k of Object.keys(nuevo)) {
