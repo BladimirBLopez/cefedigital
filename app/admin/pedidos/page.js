@@ -7,9 +7,9 @@ import { confirmarPago, cancelarPedido } from "../acciones-pedidos";
 export const dynamic = "force-dynamic";
 
 const COLOR = {
-  pendiente: "text-amber-400 border-amber-800",
-  entregado: "text-green-400 border-green-800",
-  cancelado: "text-neutral-500 border-neutral-700",
+  pendiente: "text-amber-700 border-amber-300",
+  entregado: "text-marino border-esmeralda",
+  cancelado: "text-neutral-500 border-neutral-300",
   pagado: "text-sky-400 border-sky-800",
 };
 
@@ -28,20 +28,20 @@ export default async function Pedidos({ searchParams }) {
       <AdminNav />
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-xl font-semibold mb-4">Pedidos</h1>
-        {sp?.ok && <p className="text-sm text-green-400 mb-3">Pedido entregado: las claves ya le aparecen al cliente</p>}
+        {sp?.ok && <p className="text-sm text-marino mb-3">Pedido entregado: las claves ya le aparecen al cliente</p>}
         {sp?.error === "sin_stock" && (
-          <p className="text-sm text-red-400 mb-3">No alcanza el stock. Agrega más en Claves y cuentas y vuelve a confirmar.</p>
+          <p className="text-sm text-red-600 mb-3">No alcanza el stock. Agrega más en Claves y cuentas y vuelve a confirmar.</p>
         )}
-        {sp?.error && sp.error !== "sin_stock" && <p className="text-sm text-red-400 mb-3">No se pudo confirmar ({sp.error})</p>}
+        {sp?.error && sp.error !== "sin_stock" && <p className="text-sm text-red-600 mb-3">No se pudo confirmar ({sp.error})</p>}
         <ul className="space-y-3">
-          {pedidos.length === 0 && <li className="text-sm text-neutral-400">Todavía no hay pedidos.</li>}
+          {pedidos.length === 0 && <li className="text-sm text-neutral-500">Todavía no hay pedidos.</li>}
           {pedidos.map((p) => (
-            <li key={p.id} className="rounded-2xl bg-[#161618] border border-neutral-800 p-4">
+            <li key={p.id} className="rounded-2xl bg-white border border-neutral-200 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-mono text-sm text-acento">{p.codigo}</p>
                   <p className="text-sm mt-1">{p.detalle}</p>
-                  <p className="text-xs text-neutral-400 mt-1">
+                  <p className="text-xs text-neutral-500 mt-1">
                     {p.nombre} · {new Date(p.creado_en).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}
                   </p>
                 </div>
@@ -51,7 +51,7 @@ export default async function Pedidos({ searchParams }) {
               <div className="flex flex-wrap gap-2 mt-3">
                 <a
                   href={`https://wa.me/${limpiarWhatsapp(p.whatsapp)}`}
-                  className="text-xs rounded-full border border-neutral-700 text-neutral-300 px-3 py-1.5"
+                  className="text-xs rounded-full border border-neutral-300 text-neutral-600 px-3 py-1.5"
                 >
                   WhatsApp del cliente
                 </a>
@@ -59,13 +59,13 @@ export default async function Pedidos({ searchParams }) {
                   <>
                     <form action={confirmarPago}>
                       <input type="hidden" name="id" value={p.id} />
-                      <button className="text-xs rounded-full bg-acento text-[#181108] font-semibold px-3 py-1.5">
+                      <button className="text-xs rounded-full bg-intenso hover:bg-marino text-white font-semibold px-3 py-1.5">
                         Ya pagó: entregar
                       </button>
                     </form>
                     <form action={cancelarPedido}>
                       <input type="hidden" name="id" value={p.id} />
-                      <button className="text-xs rounded-full border border-red-900 text-red-400 px-3 py-1.5">Cancelar</button>
+                      <button className="text-xs rounded-full border border-red-300 text-red-600 px-3 py-1.5">Cancelar</button>
                     </form>
                   </>
                 )}

@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 
 function Tarjeta({ titulo, valor }) {
   return (
-    <div className="rounded-2xl bg-[#161618] border border-neutral-800 p-4">
-      <p className="text-xs text-neutral-400">{titulo}</p>
+    <div className="rounded-2xl bg-white border border-neutral-200 p-4">
+      <p className="text-xs text-neutral-500">{titulo}</p>
       <p className="text-2xl font-semibold mt-1">{valor}</p>
     </div>
   );

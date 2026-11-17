@@ -5,7 +5,7 @@ import { agregarStock, borrarStock } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-const campo = "w-full rounded-xl bg-[#1e1e21] border border-neutral-700 px-4 py-3 outline-none focus:border-acento";
+const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-acento";
 
 function tapar(dato) {
   return dato.slice(0, 4) + "••••••";
@@ -25,7 +25,7 @@ export default async function Stock({ searchParams }) {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-xl font-semibold mb-4">Claves y cuentas</h1>
 
-        <form action={agregarStock} className="rounded-2xl bg-[#161618] border border-neutral-800 p-4 space-y-3">
+        <form action={agregarStock} className="rounded-2xl bg-white border border-neutral-200 p-4 space-y-3">
           <select name="producto_id" required className={campo} defaultValue="">
             <option value="" disabled>Elige el producto</option>
             {productos.map((p) => (
@@ -33,24 +33,24 @@ export default async function Stock({ searchParams }) {
             ))}
           </select>
           <textarea name="datos" rows={5} required placeholder={"Una clave o cuenta por línea\nAAAAA-BBBBB-CCCCC\ncorreo@ejemplo.com:clave"} className={campo} />
-          {sp?.error && <p className="text-sm text-red-400">Elige un producto y escribe al menos una línea</p>}
-          {sp?.ok && <p className="text-sm text-green-400">Se agregaron {sp.ok}</p>}
-          <button className="w-full rounded-xl bg-acento text-[#181108] font-semibold py-3">Agregar al stock</button>
+          {sp?.error && <p className="text-sm text-red-600">Elige un producto y escribe al menos una línea</p>}
+          {sp?.ok && <p className="text-sm text-marino">Se agregaron {sp.ok}</p>}
+          <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Agregar al stock</button>
         </form>
 
-        <h2 className="text-sm text-neutral-400 mt-6 mb-2">Últimas 30 (se muestran tapadas)</h2>
+        <h2 className="text-sm text-neutral-500 mt-6 mb-2">Últimas 30 (se muestran tapadas)</h2>
         <ul className="space-y-2">
-          {items.length === 0 && <li className="text-sm text-neutral-400">Todavía no hay stock.</li>}
+          {items.length === 0 && <li className="text-sm text-neutral-500">Todavía no hay stock.</li>}
           {items.map((i) => (
-            <li key={i.id} className="rounded-xl bg-[#161618] border border-neutral-800 px-4 py-3 flex items-center justify-between gap-3">
+            <li key={i.id} className="rounded-xl bg-white border border-neutral-200 px-4 py-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm truncate">{i.nombre}</p>
-                <p className="text-xs text-neutral-400 font-mono">{tapar(i.dato)} · {i.estado}</p>
+                <p className="text-xs text-neutral-500 font-mono">{tapar(i.dato)} · {i.estado}</p>
               </div>
               {i.estado === "disponible" && (
                 <form action={borrarStock}>
                   <input type="hidden" name="id" value={i.id} />
-                  <button className="text-xs text-red-400 border border-red-900 rounded-full px-3 py-1">Borrar</button>
+                  <button className="text-xs text-red-600 border border-red-300 rounded-full px-3 py-1">Borrar</button>
                 </form>
               )}
             </li>
