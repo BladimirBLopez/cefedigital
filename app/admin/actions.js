@@ -88,13 +88,14 @@ export async function editarProducto(formData) {
   const descripcion = String(formData.get("descripcion") || "").trim() || null;
   const precio = Number(String(formData.get("precio") || "").replace(",", "."));
   const imagen = String(formData.get("imagen_url") || "").trim();
+  const instrucciones = String(formData.get("instrucciones") || "").trim().slice(0, 2000) || null;
   if (!nombre) redirect(`${base}?error=nombre`);
   if (!Number.isFinite(precio) || precio < 0) redirect(`${base}?error=precio`);
   if (imagen && !/^https:\/\//i.test(imagen)) redirect(`${base}?error=imagen`);
   await sql`
     update productos
     set nombre = ${nombre}, categoria = ${categoria}, descripcion = ${descripcion},
-        precio = ${precio}, imagen_url = ${imagen || null}
+        precio = ${precio}, imagen_url = ${imagen || null}, instrucciones = ${instrucciones}
     where id = ${id}`;
   revalidatePath("/");
   revalidatePath("/admin/productos");

@@ -31,7 +31,7 @@ export default async function Pedido({ params }) {
   const entregas =
     ped.estado === "entregado"
       ? await sql`
-          select s.id, s.dato, pr.nombre
+          select s.id, s.dato, pr.nombre, pr.instrucciones
           from stock s join productos pr on pr.id = s.producto_id
           where s.pedido_id = ${ped.id} order by s.id`
       : [];
@@ -77,6 +77,7 @@ export default async function Pedido({ params }) {
                 <li key={e.id} className="rounded-xl bg-neutral-100 px-4 py-3">
                   <p className="text-xs text-neutral-500">{e.nombre}</p>
                   <p className="font-mono text-sm break-all select-all">{descifrar(e.dato)}</p>
+                  {e.instrucciones && <p className="text-xs text-neutral-600 mt-2 whitespace-pre-line">{e.instrucciones}</p>}
                 </li>
               ))}
             </ul>

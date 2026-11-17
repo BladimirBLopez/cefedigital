@@ -16,7 +16,7 @@ export default async function EditarProducto({ params, searchParams }) {
   const pid = Number(id);
   if (!Number.isInteger(pid)) notFound();
   const [p] = await sql`
-    select id, nombre, slug, categoria, descripcion, precio::float as precio, imagen_url
+    select id, nombre, slug, categoria, descripcion, instrucciones, precio::float as precio, imagen_url
     from productos where id = ${pid}`;
   if (!p) notFound();
 
@@ -37,6 +37,8 @@ export default async function EditarProducto({ params, searchParams }) {
           <input name="precio" required inputMode="decimal" defaultValue={p.precio} className={campo} />
           <label className="block text-xs text-neutral-500">Descripción</label>
           <textarea name="descripcion" rows={4} defaultValue={p.descripcion || ""} className={campo} />
+          <label className="block text-xs text-neutral-500">Cómo activar (lo ve el cliente cuando recibe su clave)</label>
+          <textarea name="instrucciones" rows={5} defaultValue={p.instrucciones || ""} placeholder={"1. Abre Configuración > Activación\n2. Pega la clave\n3. Reinicia el equipo"} className={campo} />
           <label className="block text-xs text-neutral-500">Link de la imagen (debe empezar con https://)</label>
           <input name="imagen_url" defaultValue={p.imagen_url || ""} placeholder="https://..." className={campo} />
           {p.imagen_url && <img src={p.imagen_url} alt={p.nombre} className="w-32 h-32 object-cover rounded-xl border border-neutral-200" />}
