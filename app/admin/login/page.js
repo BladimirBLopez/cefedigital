@@ -1,11 +1,17 @@
 import { redirect } from "next/navigation";
 import { claveCorrecta, crearSesion, haySesion } from "@/lib/auth";
+import { ipCliente, contar, anotar } from "@/lib/limite";
 
 export const dynamic = "force-dynamic";
 
 async function entrar(formData) {
   "use server";
-  if (!claveCorrecta(formData.get("clave"))) redirect("/admin/login?error=1");
+  const ip = await ipCliente();
+  if ((await contar("login", ip, 15)) >= 5) redirect("/admin/login?error=bloqueado");
+  if (!claveCorrecta(formData.get("clave"))) {
+    await anotar("login", ip);
+    redirect("/admin/login?error=1");
+  }
   await crearSesion();
   redirect("/admin");
 }
@@ -26,7 +32,7 @@ export default async function Login({ searchParams }) {
           placeholder="Clave"
           className="w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-acento"
         />
-        {sp?.error && <p className="text-sm text-red-600 mt-3">Clave incorrecta</p>}
+        {sp?.error && <p className="text-sm text-red-600 mt-3">{sp.error === "bloqueado" ? "Demasiados intentos. Espera 15 minutos." : "Clave incorrecta"}</p>}
         <button className="w-full mt-5 rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Entrar</button>
       </form>
     </main>

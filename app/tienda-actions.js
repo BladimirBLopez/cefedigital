@@ -3,6 +3,7 @@
 import crypto from "crypto";
 import { redirect } from "next/navigation";
 import { sql } from "@/lib/db";
+import { ipCliente, contar, anotar } from "@/lib/limite";
 
 export async function crearPedido(formData) {
   const productoId = Number(formData.get("producto_id"));
@@ -20,6 +21,11 @@ export async function crearPedido(formData) {
     from productos p where p.id = ${productoId} and p.activo`;
   if (!p) redirect("/");
   if (p.disponibles < cantidad) redirect(`/producto/${p.slug}?error=stock`);
+
+  const ip = await ipCliente();
+  if ((await contar("pedido_ip", ip, 60)) >= 8 || (await contar("pedido_wa", whatsapp, 60)) >= 4) redirect(`/producto/${p.slug}?error=limite`);
+  await anotar("pedido_ip", ip);
+  await anotar("pedido_wa", whatsapp);
 
   const total = Math.round(p.precio * cantidad * 100) / 100;
   const codigo = crypto.randomBytes(6).toString("hex").toUpperCase();
