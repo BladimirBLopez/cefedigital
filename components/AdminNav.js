@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FiHome, FiPackage, FiShoppingBag, FiClock, FiSettings } from "react-icons/fi";
 import { salir } from "@/app/admin/actions";
 
 const ENLACES = [
-  { href: "/admin", texto: "Inicio", exacto: true },
-  { href: "/admin/productos", texto: "Productos" },
-  { href: "/admin/pedidos", texto: "Pedidos" },
-  { href: "/admin/vencimientos", texto: "Vencimientos" },
-  { href: "/admin/registro", texto: "Registro" },
-  { href: "/admin/ajustes", texto: "Ajustes" },
+  { href: "/admin", texto: "Inicio", icono: FiHome, exacto: true },
+  { href: "/admin/productos", texto: "Productos", icono: FiPackage },
+  { href: "/admin/pedidos", texto: "Pedidos", icono: FiShoppingBag },
+  { href: "/admin/vencimientos", texto: "Vencimientos", icono: FiClock },
+  { href: "/admin/ajustes", texto: "Ajustes", icono: FiSettings },
 ];
 
 export default function AdminNav() {
@@ -33,11 +33,11 @@ export default function AdminNav() {
               key={e.href}
               href={e.href}
               className={
-                "shrink-0 rounded-full px-3 py-1 text-sm " +
+                "shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm " +
                 (activo ? "bg-white text-marino font-semibold" : "text-white/80 hover:bg-white/10")
               }
             >
-              {e.texto}
+              <e.icono className="h-4 w-4" />{e.texto}
             </Link>
           );
         })}

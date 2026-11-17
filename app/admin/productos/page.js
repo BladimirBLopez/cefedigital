@@ -61,7 +61,6 @@ export default async function Productos({ searchParams }) {
     ["todos", "Todos"],
     ["venta", "A la venta"],
     ["vencen", "Por vencer"],
-    ["agotado", "Agotados"],
     ["oculto", "Ocultos"],
   ];
 
@@ -74,12 +73,11 @@ export default async function Productos({ searchParams }) {
           <Link href="/admin/registro?f=producto" className="text-xs text-marino hover:underline">Ver historial</Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-3 gap-3 mb-5">
           {[
             ["Total", stats.total, ""],
             ["A la venta", stats.venta, "text-marino"],
             ["Por vencer", stats.vencen, stats.vencen ? "text-amber-600" : ""],
-            ["Agotados", stats.agotado, stats.agotado ? "text-red-600" : ""],
           ].map(([t, n, c]) => (
             <div key={t} className="rounded-2xl bg-white border border-neutral-200 p-3">
               <p className="text-xs text-neutral-500">{t}</p>
