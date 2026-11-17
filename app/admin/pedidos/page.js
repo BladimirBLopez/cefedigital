@@ -19,9 +19,11 @@ export default async function Pedidos({ searchParams }) {
   const q = sp?.q ? String(sp.q).trim().slice(0, 40) : null;
   const pedidos = await sql`
     select p.id, p.codigo, p.total::float as total, p.estado, p.creado_en, c.nombre, c.whatsapp,
-      (select string_agg(pi.cantidad || ' x ' || pr.nombre || coalesce(' [ID: ' || pi.dato_cliente || ']', ''), ', ')
+      (select string_agg(pi.cantidad || ' x ' || pr.nombre || coalesce(' (' || pi.plan_nombre || ')', '') || coalesce(' [ID: ' || pi.dato_cliente || ']', ''), ', ')
          from pedido_items pi join productos pr on pr.id = pi.producto_id
-         where pi.pedido_id = p.id) as detalle
+         where pi.pedido_id = p.id) as detalle,
+      (select sum(pi.cantidad * (pi.precio_unit - pi.costo_unit))::float
+         from pedido_items pi where pi.pedido_id = p.id and pi.costo_unit is not null) as ganancia
     from pedidos p join clientes c on c.id = p.cliente_id
     where (${q}::text is null or p.codigo ilike '%' || ${q} || '%' or c.nombre ilike '%' || ${q} || '%' or c.whatsapp ilike '%' || ${q} || '%')
     order by p.id desc limit 50`;
@@ -54,7 +56,7 @@ export default async function Pedidos({ searchParams }) {
                 </div>
                 <span className={"text-xs rounded-full px-3 py-1 border " + (COLOR[p.estado] || "")}>{p.estado}</span>
               </div>
-              <p className="font-semibold mt-2">Bs {p.total.toFixed(2)}</p>
+              <p className="font-semibold mt-2">Bs {p.total.toFixed(2)}{p.ganancia != null && <span className="ml-2 text-xs font-medium text-marino">Ganancia Bs {p.ganancia.toFixed(2)}</span>}</p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <a
                   href={`https://wa.me/${limpiarWhatsapp(p.whatsapp)}`}

@@ -25,7 +25,7 @@ export default async function Pedido({ params }) {
   if (!ped) notFound();
 
   const items = await sql`
-    select pi.cantidad, pi.dato_cliente, pr.tipo, pr.nombre
+    select pi.cantidad, pi.dato_cliente, pi.plan_nombre, pr.tipo, pr.nombre
     from pedido_items pi join productos pr on pr.id = pi.producto_id
     where pi.pedido_id = ${ped.id}`;
   const entregas =
@@ -62,7 +62,7 @@ export default async function Pedido({ params }) {
             </ol>
           )}
           <ul className="text-sm text-neutral-600 mt-3 space-y-1">
-            {items.map((i, k) => (<li key={k}>{i.cantidad} x {i.nombre}{i.dato_cliente && <span className="font-mono text-xs text-neutral-500"> [ID: {i.dato_cliente}]</span>}</li>))}
+            {items.map((i, k) => (<li key={k}>{i.cantidad} x {i.nombre}{i.plan_nombre && <span className="text-xs text-neutral-500"> · {i.plan_nombre}</span>}{i.dato_cliente && <span className="font-mono text-xs text-neutral-500"> [ID: {i.dato_cliente}]</span>}</li>))}
           </ul>
           <p className="text-xl font-bold text-intenso mt-4">Total: Bs {ped.total.toFixed(2)}</p>
           <p className="text-xs text-neutral-500 mt-2">Guarda este código: con él puedes ver tu pedido cuando quieras.</p>
