@@ -3,6 +3,7 @@ import { sql } from "@/lib/db";
 import { obtenerAjustes, limpiarWhatsapp } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
+import { descifrar } from "@/lib/cripto";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false } };
@@ -75,7 +76,7 @@ export default async function Pedido({ params }) {
               {entregas.map((e) => (
                 <li key={e.id} className="rounded-xl bg-neutral-100 px-4 py-3">
                   <p className="text-xs text-neutral-500">{e.nombre}</p>
-                  <p className="font-mono text-sm break-all select-all">{e.dato}</p>
+                  <p className="font-mono text-sm break-all select-all">{descifrar(e.dato)}</p>
                 </li>
               ))}
             </ul>

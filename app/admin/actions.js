@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin, cerrarSesion } from "@/lib/auth";
+import { cifrar } from "@/lib/cripto";
 
 function hacerSlug(texto) {
   return String(texto)
@@ -64,7 +65,7 @@ export async function agregarStock(formData) {
   if (lineas.length === 0) redirect("/admin/stock?error=vacio");
   await sql`
     insert into stock (producto_id, dato)
-    select ${id}, unnest(${lineas}::text[])`;
+    select ${id}, unnest(${lineas.map((l) => cifrar(l))}::text[])`;
   revalidatePath("/admin/stock");
   redirect(`/admin/stock?ok=${lineas.length}`);
 }

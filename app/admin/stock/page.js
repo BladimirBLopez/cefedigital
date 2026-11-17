@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
+import { descifrar } from "@/lib/cripto";
 import { agregarStock, borrarStock } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export default async function Stock({ searchParams }) {
             <li key={i.id} className="rounded-xl bg-white border border-neutral-200 px-4 py-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm truncate">{i.nombre}</p>
-                <p className="text-xs text-neutral-500 font-mono">{tapar(i.dato)} · {i.estado}</p>
+                <p className="text-xs text-neutral-500 font-mono">{tapar(descifrar(i.dato))} · {i.estado}</p>
               </div>
               {i.estado === "disponible" && (
                 <form action={borrarStock}>
