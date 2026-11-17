@@ -46,27 +46,40 @@ export default async function Pedido({ params }) {
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-4">
         <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
           <p className="text-xs text-neutral-500">Tu pedido</p>
-          <p className="text-xl font-semibold font-mono text-acento">{ped.codigo}</p>
-          <p className="text-sm mt-2">Estado: <b>{ESTADOS[ped.estado] || ped.estado}</b></p>
+          <p className="text-2xl font-bold font-mono text-intenso tracking-wider">{ped.codigo}</p>
+          <p className="text-sm mt-2">Estado: <b className="text-marino">{ESTADOS[ped.estado] || ped.estado}</b></p>
+          {ped.estado !== "cancelado" && (
+            <ol className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-medium">
+              {["Pedido hecho", "Pago confirmado", "Entregado"].map((txt, i) => {
+                const paso = ped.estado === "entregado" ? 3 : ped.estado === "pagado" ? 2 : 1;
+                const ok = i < paso;
+                return (
+                  <li key={txt} className={"rounded-xl border py-2 " + (ok ? "bg-esmeralda/20 border-esmeralda text-marino" : "bg-neutral-50 border-neutral-200 text-neutral-400")}>
+                    {ok ? "✓ " : ""}{txt}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
           <ul className="text-sm text-neutral-600 mt-3 space-y-1">
             {items.map((i, k) => (<li key={k}>{i.cantidad} x {i.nombre}{i.dato_cliente && <span className="font-mono text-xs text-neutral-500"> [ID: {i.dato_cliente}]</span>}</li>))}
           </ul>
-          <p className="text-lg font-semibold mt-3">Total: Bs {ped.total.toFixed(2)}</p>
+          <p className="text-xl font-bold text-intenso mt-4">Total: Bs {ped.total.toFixed(2)}</p>
           <p className="text-xs text-neutral-500 mt-2">Guarda este código: con él puedes ver tu pedido cuando quieras.</p>
         </div>
 
         {ped.estado === "pendiente" && (
           <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
-            <h2 className="font-semibold mb-2">Cómo pagar</h2>
+            <h2 className="text-lg font-bold mb-2">Cómo pagar</h2>
             <p className="text-sm text-neutral-600 whitespace-pre-line">
               {aj.instrucciones_pago || "Escríbenos por WhatsApp y te damos los datos para pagar."}
             </p>
             {n && (
-              <a href={`https://wa.me/${n}?text=${msg}`} className="block text-center mt-4 rounded-xl bg-esmeralda text-marino font-semibold py-3">
+              <a href={`https://wa.me/${n}?text=${msg}`} className="block text-center mt-4 rounded-xl bg-esmeralda hover:brightness-95 transition text-marino font-semibold py-3">
                 Enviar comprobante por WhatsApp
               </a>
             )}
-            <p className="text-xs text-neutral-500 mt-3">Cuando confirmemos tu pago, tus datos aparecen aquí mismo. Recarga esta página.</p>
+            <p className="text-xs text-neutral-500 mt-3">Cuando confirmemos tu pago, te enviamos tu clave o cuenta por WhatsApp.</p>
           </div>
         )}
 
