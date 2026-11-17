@@ -8,8 +8,9 @@ export default function TiendaFooter({ nombre, whatsapp }) {
         <p className="font-semibold">{nombre}</p>
         <p className="text-white/70 mt-1">Productos digitales con entrega rápida.</p>
         <div className="h-1 w-12 rounded bg-cian mt-3" />
+        <a href="/garantia" className="block mt-4 text-white/80 underline">Garantía y términos</a>
         {n && (
-          <a href={`https://wa.me/${n}`} className="inline-block mt-4 text-turquesa underline">
+          <a href={`https://wa.me/${n}`} className="inline-block mt-2 text-turquesa underline">
             Soporte por WhatsApp
           </a>
         )}
