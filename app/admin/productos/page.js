@@ -2,31 +2,43 @@ import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import Link from "next/link";
 import AdminNav from "@/components/AdminNav";
+import SubirFoto from "@/components/SubirFoto";
+import { asegurarEsquema } from "@/lib/esquema";
+import { estadoVence } from "@/lib/vence";
 import { crearProducto, cambiarActivo } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-acento";
 const TIPOS = { clave: "Clave", cuenta: "Cuenta", recarga: "Recarga" };
+const ERRORES = {
+  nombre: "Falta el nombre",
+  precio: "El precio no es válido",
+  vence: "La fecha de vencimiento no es válida",
+  foto: "No se pudo subir la foto (máx. 4 MB)",
+};
 
 export default async function Productos({ searchParams }) {
   await requireAdmin();
+  await asegurarEsquema();
   const sp = await searchParams;
   const q = String(sp?.q || "").trim().toLowerCase();
-  const estado = ["venta", "oculto", "agotado"].includes(sp?.estado) ? sp.estado : "todos";
+  const estado = ["venta", "oculto", "agotado", "vencen"].includes(sp?.estado) ? sp.estado : "todos";
 
   const todos = await sql`
-    select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url,
+    select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.vence::text as vence,
       p.precio::float as precio, p.activo,
       (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
     from productos p order by p.id desc`;
 
   const agotado = (p) => p.activo && p.tipo !== "recarga" && p.disponibles === 0;
+  const vencen = (p) => ["vencido", "pronto"].includes(estadoVence(p.vence).clave);
   const stats = {
     total: todos.length,
     venta: todos.filter((p) => p.activo).length,
-    oculto: todos.filter((p) => !p.activo).length,
     agotado: todos.filter(agotado).length,
+    vencen: todos.filter(vencen).length,
+    oculto: todos.filter((p) => !p.activo).length,
   };
 
   const lista = todos.filter((p) => {
@@ -34,6 +46,7 @@ export default async function Productos({ searchParams }) {
     if (estado === "venta") return p.activo;
     if (estado === "oculto") return !p.activo;
     if (estado === "agotado") return agotado(p);
+    if (estado === "vencen") return vencen(p);
     return true;
   });
 
@@ -47,8 +60,9 @@ export default async function Productos({ searchParams }) {
   const chips = [
     ["todos", "Todos"],
     ["venta", "A la venta"],
-    ["oculto", "Ocultos"],
+    ["vencen", "Por vencer"],
     ["agotado", "Agotados"],
+    ["oculto", "Ocultos"],
   ];
 
   return (
@@ -64,7 +78,7 @@ export default async function Productos({ searchParams }) {
           {[
             ["Total", stats.total, ""],
             ["A la venta", stats.venta, "text-marino"],
-            ["Ocultos", stats.oculto, "text-neutral-500"],
+            ["Por vencer", stats.vencen, stats.vencen ? "text-amber-600" : ""],
             ["Agotados", stats.agotado, stats.agotado ? "text-red-600" : ""],
           ].map(([t, n, c]) => (
             <div key={t} className="rounded-2xl bg-white border border-neutral-200 p-3">
@@ -75,14 +89,24 @@ export default async function Productos({ searchParams }) {
         </div>
 
         <details open={!!sp?.error} className="rounded-2xl bg-white border border-neutral-200 mb-5">
-          <summary className="cursor-pointer select-none px-4 py-3 font-medium text-marino">+ Nuevo producto</summary>
+          <summary className="cursor-pointer select-none px-4 py-3 font-medium text-marino">+ Registrar producto</summary>
           <form action={crearProducto} className="p-4 pt-0 space-y-3">
+            <SubirFoto />
             <input name="nombre" required placeholder="Nombre (ej: Windows 11 Pro)" className={campo} />
             <input name="categoria" placeholder="Categoría (ej: Windows)" className={campo} />
+            <select name="tipo" defaultValue="clave" className={campo}>
+              <option value="clave">Clave / licencia</option>
+              <option value="cuenta">Cuenta</option>
+              <option value="recarga">Recarga (ID del cliente)</option>
+            </select>
+            <input name="campo_cliente" placeholder="Solo recargas: qué pedir al cliente (ej: Tu ID de jugador)" className={campo} />
             <input name="precio" required inputMode="decimal" placeholder="Precio en Bs" className={campo} />
+            <label className="block text-xs text-neutral-500">
+              Fecha de vencimiento (opcional)
+              <input name="vence" type="date" className={campo + " mt-1"} />
+            </label>
             <textarea name="descripcion" rows={2} placeholder="Descripción corta" className={campo} />
-            {sp?.error === "nombre" && <p className="text-sm text-red-600">Falta el nombre</p>}
-            {sp?.error === "precio" && <p className="text-sm text-red-600">El precio no es válido</p>}
+            {ERRORES[sp?.error] && <p className="text-sm text-red-600">{ERRORES[sp.error]}</p>}
             <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar producto</button>
           </form>
         </details>
@@ -113,9 +137,10 @@ export default async function Productos({ searchParams }) {
           {lista.length === 0 && <li className="text-sm text-neutral-500">No hay productos con ese filtro.</li>}
           {lista.map((p) => {
             const bajo = p.tipo !== "recarga" && p.disponibles <= 2;
+            const ev = estadoVence(p.vence);
             return (
               <li key={p.id} className="rounded-2xl bg-white border border-neutral-200 p-3 flex items-center gap-3">
-                <div className="h-14 w-14 shrink-0 rounded-xl bg-neutral-100 overflow-hidden flex items-center justify-center text-neutral-400 text-xs">
+                <div className="h-16 w-16 shrink-0 rounded-xl bg-neutral-100 overflow-hidden flex items-center justify-center text-neutral-400 text-xs">
                   {p.imagen_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={p.imagen_url} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -136,6 +161,9 @@ export default async function Productos({ searchParams }) {
                       {p.tipo === "recarga" ? "· Bajo pedido" : `· ${p.disponibles} en stock`}
                     </span>
                   </p>
+                  {ev.clave !== "sin" && (
+                    <span className={"inline-block mt-1 text-xs rounded-full px-2 py-0.5 " + ev.clase}>{ev.texto}</span>
+                  )}
                 </div>
                 <form action={cambiarActivo}>
                   <input type="hidden" name="id" value={p.id} />
