@@ -28,7 +28,6 @@ export default async function Resumen() {
         <h1 className="text-xl font-semibold mb-4">Resumen</h1>
         <div className="grid grid-cols-2 gap-3">
           <Tarjeta titulo="Productos a la venta" valor={r.productos} />
-          <Tarjeta titulo="Claves y cuentas disponibles" valor={r.stock} />
           <Tarjeta titulo="Pedidos por confirmar" valor={r.pendientes} />
           <Tarjeta titulo="Ventas cobradas (Bs)" valor={r.ventas.toFixed(2)} />
         </div>
