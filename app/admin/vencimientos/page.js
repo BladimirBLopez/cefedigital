@@ -12,14 +12,14 @@ export default async function Vencimientos() {
   await requireAdmin();
   const filas = await sql`
     select pi.id, pi.avisado_en, pr.nombre as producto, c.nombre as cliente, c.whatsapp, p.codigo,
-      (p.entregado_en + pr.duracion_dias * interval '1 day') as vence_en
+      pi.vence_en as vence_en
     from pedido_items pi
     join pedidos p on p.id = pi.pedido_id
     join productos pr on pr.id = pi.producto_id
     join clientes c on c.id = p.cliente_id
-    where p.estado = 'entregado' and p.entregado_en is not null and pr.duracion_dias is not null
-      and p.entregado_en + pr.duracion_dias * interval '1 day' < now() + interval '2 days'
-      and p.entregado_en + pr.duracion_dias * interval '1 day' > now() - interval '15 days'
+    where p.estado = 'entregado' and pi.vence_en is not null
+      and pi.vence_en < now() + interval '2 days'
+      and pi.vence_en > now() - interval '15 days'
     order by vence_en`;
 
   return (

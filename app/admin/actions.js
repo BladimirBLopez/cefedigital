@@ -82,6 +82,7 @@ export async function crearProducto(formData) {
       values (${p.nombre}, ${slug2}, ${p.descripcion}, ${p.categoria}, ${p.precio}, ${p.tipo}, ${p.campoCliente}, ${p.vence}, ${imagen})
       returning id`;
   }
+  if (p.duracion && r[0]?.id) await sql`update productos set duracion_dias = ${p.duracion} where id = ${r[0].id}`;
   await anotar(
     "crear",
     "producto",

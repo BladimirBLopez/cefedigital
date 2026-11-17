@@ -66,7 +66,7 @@ export default async function EditarProducto({ params, searchParams }) {
           />
           <input name="precio" required inputMode="decimal" defaultValue={p.precio} placeholder="Precio en Bs" className={campo} />
           <label className="block text-xs text-neutral-500">
-            Fecha de vencimiento (vacío = no vence)
+            Vence lo que compraste al proveedor (vacío = no vence)
             <input name="vence" type="date" defaultValue={p.vence || ""} className={campo + " mt-1"} />
           </label>
           <label className="block text-xs text-neutral-500">
