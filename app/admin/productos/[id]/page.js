@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
 import SubirFoto from "@/components/SubirFoto";
+import CamposProducto from "@/components/CamposProducto";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { editarProducto } from "../../actions";
@@ -52,26 +53,12 @@ export default async function EditarProducto({ params, searchParams }) {
           <input type="hidden" name="imagen_url" value={p.imagen_url || ""} />
           <SubirFoto actual={p.imagen_url || ""} />
           <input name="nombre" required defaultValue={p.nombre} placeholder="Nombre" className={campo} />
-          <input name="categoria" defaultValue={p.categoria || ""} placeholder="Categoría" className={campo} />
-          <select name="tipo" defaultValue={p.tipo || "clave"} className={campo}>
-            <option value="clave">Clave / licencia</option>
-            <option value="cuenta">Cuenta</option>
-            <option value="recarga">Recarga (ID del cliente)</option>
-          </select>
-          <input
-            name="campo_cliente"
-            defaultValue={p.campo_cliente || ""}
-            placeholder="Solo recargas: qué pedir al cliente"
-            className={campo}
-          />
+          <input name="categoria" defaultValue={p.categoria || ""} placeholder="Categoría de la portada (ej: Streaming, Windows)" className={campo} />
+          <CamposProducto tipo={p.tipo} campoCliente={p.campo_cliente} duracion={p.duracion_dias} />
           <input name="precio" required inputMode="decimal" defaultValue={p.precio} placeholder="Precio en Bs" className={campo} />
           <label className="block text-xs text-neutral-500">
             Vence lo que compraste al proveedor (vacío = no vence)
             <input name="vence" type="date" defaultValue={p.vence || ""} className={campo + " mt-1"} />
-          </label>
-          <label className="block text-xs text-neutral-500">
-            Duración del servicio en días (ej: 30; vacío = no avisa)
-            <input name="duracion_dias" inputMode="numeric" defaultValue={p.duracion_dias || ""} className={campo + " mt-1"} />
           </label>
           <textarea name="descripcion" rows={2} defaultValue={p.descripcion || ""} placeholder="Descripción" className={campo} />
           <textarea

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import Link from "next/link";
 import AdminNav from "@/components/AdminNav";
 import SubirFoto from "@/components/SubirFoto";
+import CamposProducto from "@/components/CamposProducto";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { crearProducto, cambiarActivo } from "../actions";
@@ -91,19 +92,13 @@ export default async function Productos({ searchParams }) {
           <form action={crearProducto} className="p-4 pt-0 space-y-3">
             <SubirFoto />
             <input name="nombre" required placeholder="Nombre (ej: Windows 11 Pro)" className={campo} />
-            <input name="categoria" placeholder="Categoría (ej: Windows)" className={campo} />
-            <select name="tipo" defaultValue="clave" className={campo}>
-              <option value="clave">Clave / licencia</option>
-              <option value="cuenta">Cuenta</option>
-              <option value="recarga">Recarga (ID del cliente)</option>
-            </select>
-            <input name="campo_cliente" placeholder="Solo recargas: qué pedir al cliente (ej: Tu ID de jugador)" className={campo} />
+            <input name="categoria" placeholder="Categoría de la portada (ej: Streaming, Windows)" className={campo} />
+            <CamposProducto />
             <input name="precio" required inputMode="decimal" placeholder="Precio en Bs" className={campo} />
             <label className="block text-xs text-neutral-500">
               Vence lo que compraste al proveedor (opcional)
               <input name="vence" type="date" className={campo + " mt-1"} />
             </label>
-            <input name="duracion_dias" inputMode="numeric" placeholder="Duración del servicio en días (ej: 30, solo streaming)" className={campo} />
             <textarea name="descripcion" rows={2} placeholder="Descripción corta" className={campo} />
             {ERRORES[sp?.error] && <p className="text-sm text-red-600">{ERRORES[sp.error]}</p>}
             <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar producto</button>
