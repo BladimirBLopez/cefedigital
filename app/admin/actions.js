@@ -89,13 +89,19 @@ export async function editarProducto(formData) {
   const precio = Number(String(formData.get("precio") || "").replace(",", "."));
   const imagen = String(formData.get("imagen_url") || "").trim();
   const instrucciones = String(formData.get("instrucciones") || "").trim().slice(0, 2000) || null;
+  const tipoForm = String(formData.get("tipo") || "clave");
+  const tipo = ["clave", "cuenta", "recarga"].includes(tipoForm) ? tipoForm : "clave";
+  const campoCliente = tipo === "recarga"
+    ? (String(formData.get("campo_cliente") || "").trim().slice(0, 60) || "Tu ID de jugador")
+    : null;
   if (!nombre) redirect(`${base}?error=nombre`);
   if (!Number.isFinite(precio) || precio < 0) redirect(`${base}?error=precio`);
   if (imagen && !/^https:\/\//i.test(imagen)) redirect(`${base}?error=imagen`);
   await sql`
     update productos
     set nombre = ${nombre}, categoria = ${categoria}, descripcion = ${descripcion},
-        precio = ${precio}, imagen_url = ${imagen || null}, instrucciones = ${instrucciones}
+        precio = ${precio}, imagen_url = ${imagen || null}, instrucciones = ${instrucciones},
+        tipo = ${tipo}, campo_cliente = ${campoCliente}
     where id = ${id}`;
   revalidatePath("/");
   revalidatePath("/admin/productos");

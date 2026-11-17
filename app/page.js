@@ -13,7 +13,7 @@ export default async function Home({ searchParams }) {
   const cats = await sql`select distinct categoria from productos where activo and categoria is not null order by 1`;
   const prods = await sql`
     select p.slug, p.nombre, p.categoria, p.imagen_url, p.precio::float as precio,
-      (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
+      case when p.tipo = 'recarga' then 99 else (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') end as disponibles
     from productos p
     where p.activo and (${cat}::text is null or p.categoria = ${cat})
     order by p.id desc`;

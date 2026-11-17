@@ -19,7 +19,7 @@ export default async function Pedidos({ searchParams }) {
   const q = sp?.q ? String(sp.q).trim().slice(0, 40) : null;
   const pedidos = await sql`
     select p.id, p.codigo, p.total::float as total, p.estado, p.creado_en, c.nombre, c.whatsapp,
-      (select string_agg(pi.cantidad || ' x ' || pr.nombre, ', ')
+      (select string_agg(pi.cantidad || ' x ' || pr.nombre || coalesce(' [ID: ' || pi.dato_cliente || ']', ''), ', ')
          from pedido_items pi join productos pr on pr.id = pi.producto_id
          where pi.pedido_id = p.id) as detalle
     from pedidos p join clientes c on c.id = p.cliente_id

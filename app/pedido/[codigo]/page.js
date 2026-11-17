@@ -25,7 +25,7 @@ export default async function Pedido({ params }) {
   if (!ped) notFound();
 
   const items = await sql`
-    select pi.cantidad, pr.nombre
+    select pi.cantidad, pi.dato_cliente, pr.tipo, pr.nombre
     from pedido_items pi join productos pr on pr.id = pi.producto_id
     where pi.pedido_id = ${ped.id}`;
   const entregas =
@@ -36,6 +36,7 @@ export default async function Pedido({ params }) {
           where s.pedido_id = ${ped.id} order by s.id`
       : [];
 
+  const hayRecarga = items.some((i) => i.tipo === "recarga");
   const n = limpiarWhatsapp(aj.whatsapp);
   const msg = encodeURIComponent(`Hola, hice el pedido ${ped.codigo} por Bs ${ped.total.toFixed(2)}. Te envío mi comprobante de pago.`);
 
@@ -48,7 +49,7 @@ export default async function Pedido({ params }) {
           <p className="text-xl font-semibold font-mono text-acento">{ped.codigo}</p>
           <p className="text-sm mt-2">Estado: <b>{ESTADOS[ped.estado] || ped.estado}</b></p>
           <ul className="text-sm text-neutral-600 mt-3 space-y-1">
-            {items.map((i, k) => (<li key={k}>{i.cantidad} x {i.nombre}</li>))}
+            {items.map((i, k) => (<li key={k}>{i.cantidad} x {i.nombre}{i.dato_cliente && <span className="font-mono text-xs text-neutral-500"> [ID: {i.dato_cliente}]</span>}</li>))}
           </ul>
           <p className="text-lg font-semibold mt-3">Total: Bs {ped.total.toFixed(2)}</p>
           <p className="text-xs text-neutral-500 mt-2">Guarda este código: con él puedes ver tu pedido cuando quieras.</p>
@@ -71,7 +72,8 @@ export default async function Pedido({ params }) {
 
         {ped.estado === "entregado" && (
           <div className="rounded-2xl bg-white border border-esmeralda shadow-sm p-5">
-            <h2 className="font-semibold mb-3 text-marino">Tus claves y cuentas</h2>
+            {entregas.length > 0 && <h2 className="font-semibold mb-3 text-marino">Tus claves y cuentas</h2>}
+            {hayRecarga && <p className="text-sm font-semibold text-marino mb-2">Tu recarga fue realizada. Si no la ves en tu juego, escríbenos por WhatsApp.</p>}
             <ul className="space-y-2">
               {entregas.map((e) => (
                 <li key={e.id} className="rounded-xl bg-neutral-100 px-4 py-3">

@@ -15,11 +15,12 @@ export default async function Producto({ params, searchParams }) {
   const sp = await searchParams;
   const aj = await obtenerAjustes();
   const [p] = await sql`
-    select p.id, p.slug, p.nombre, p.categoria, p.descripcion, p.imagen_url, p.precio::float as precio,
+    select p.id, p.slug, p.nombre, p.categoria, p.descripcion, p.imagen_url, p.tipo, p.campo_cliente, p.precio::float as precio,
       (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
     from productos p where p.slug = ${slug} and p.activo`;
   if (!p) notFound();
-  const max = Math.min(5, p.disponibles);
+  const esRecarga = p.tipo === "recarga";
+  const max = esRecarga ? 5 : Math.min(5, p.disponibles);
 
   return (
     <>
@@ -44,12 +45,16 @@ export default async function Producto({ params, searchParams }) {
             <input type="hidden" name="slug" value={p.slug} />
             <input name="nombre" required maxLength={80} placeholder="Tu nombre" className={campo} />
             <input name="whatsapp" required inputMode="tel" placeholder="Tu WhatsApp (ej: 71234567)" className={campo} />
+            {esRecarga && p.campo_cliente && (
+              <input name="dato_cliente" required maxLength={100} placeholder={p.campo_cliente} className={campo} />
+            )}
             <select name="cantidad" defaultValue="1" className={campo}>
               {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>{n} {n === 1 ? "unidad" : "unidades"}</option>
               ))}
             </select>
             {sp?.error === "datos" && <p className="text-sm text-red-600">Revisa tu nombre y tu número de WhatsApp</p>}
+            {sp?.error === "dato" && <p className="text-sm text-red-600">Falta: {p.campo_cliente || "el dato de tu cuenta"}</p>}
             {sp?.error === "stock" && <p className="text-sm text-red-600">No alcanza el stock para esa cantidad</p>}
             {sp?.error === "limite" && <p className="text-sm text-red-600">Hiciste muchos pedidos seguidos. Espera un rato o escríbenos por WhatsApp.</p>}
             <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3 transition">Pedir ahora</button>

@@ -16,7 +16,7 @@ export default async function EditarProducto({ params, searchParams }) {
   const pid = Number(id);
   if (!Number.isInteger(pid)) notFound();
   const [p] = await sql`
-    select id, nombre, slug, categoria, descripcion, instrucciones, precio::float as precio, imagen_url
+    select id, nombre, slug, categoria, descripcion, instrucciones, tipo, campo_cliente, precio::float as precio, imagen_url
     from productos where id = ${pid}`;
   if (!p) notFound();
 
@@ -31,12 +31,20 @@ export default async function EditarProducto({ params, searchParams }) {
           <input type="hidden" name="id" value={p.id} />
           <label className="block text-xs text-neutral-500">Nombre</label>
           <input name="nombre" required defaultValue={p.nombre} className={campo} />
+          <label className="block text-xs text-neutral-500">Tipo de producto</label>
+          <select name="tipo" defaultValue={p.tipo || "clave"} className={campo}>
+            <option value="clave">Clave o licencia (usa stock)</option>
+            <option value="cuenta">Cuenta de streaming (usa stock)</option>
+            <option value="recarga">Recarga (el cliente pone su ID, sin stock)</option>
+          </select>
           <label className="block text-xs text-neutral-500">Categoría</label>
           <input name="categoria" defaultValue={p.categoria || ""} className={campo} />
           <label className="block text-xs text-neutral-500">Precio en Bs</label>
           <input name="precio" required inputMode="decimal" defaultValue={p.precio} className={campo} />
           <label className="block text-xs text-neutral-500">Descripción</label>
           <textarea name="descripcion" rows={4} defaultValue={p.descripcion || ""} className={campo} />
+          <label className="block text-xs text-neutral-500">Solo recargas: qué dato le pides al cliente (ej: Tu ID de jugador)</label>
+          <input name="campo_cliente" defaultValue={p.campo_cliente || ""} placeholder="Tu ID de jugador" className={campo} />
           <label className="block text-xs text-neutral-500">Cómo activar (lo ve el cliente cuando recibe su clave)</label>
           <textarea name="instrucciones" rows={5} defaultValue={p.instrucciones || ""} placeholder={"1. Abre Configuración > Activación\n2. Pega la clave\n3. Reinicia el equipo"} className={campo} />
           <label className="block text-xs text-neutral-500">Link de la imagen (debe empezar con https://)</label>
