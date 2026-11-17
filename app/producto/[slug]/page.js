@@ -15,7 +15,7 @@ export default async function Producto({ params, searchParams }) {
   const sp = await searchParams;
   const aj = await obtenerAjustes();
   const [p] = await sql`
-    select p.id, p.slug, p.nombre, p.categoria, p.descripcion, p.precio::float as precio,
+    select p.id, p.slug, p.nombre, p.categoria, p.descripcion, p.imagen_url, p.precio::float as precio,
       (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
     from productos p where p.slug = ${slug} and p.activo`;
   if (!p) notFound();
@@ -27,6 +27,7 @@ export default async function Producto({ params, searchParams }) {
       <main className="mx-auto max-w-3xl px-4 py-6">
         <Link href="/" className="text-sm text-neutral-400">← Volver a la tienda</Link>
         <div className="mt-4 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
+          {p.imagen_url && <img src={p.imagen_url} alt={p.nombre} className="w-full max-h-72 object-cover rounded-xl mb-4" />}
           {p.categoria && <p className="text-xs text-acento">{p.categoria}</p>}
           <h1 className="text-xl font-semibold mt-1">{p.nombre}</h1>
           <p className="text-2xl font-semibold mt-3">Bs {p.precio.toFixed(2)}</p>

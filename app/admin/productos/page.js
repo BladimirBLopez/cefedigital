@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import Link from "next/link";
 import AdminNav from "@/components/AdminNav";
 import { crearProducto, cambiarActivo } from "../actions";
 
@@ -18,7 +19,8 @@ export default async function Productos({ searchParams }) {
     <>
       <AdminNav />
       <main className="mx-auto max-w-2xl px-4 py-6">
-        <h1 className="text-xl font-semibold mb-4">Productos</h1>
+        <h1 className="text-xl font-semibold">Productos</h1>
+        <p className="text-xs text-neutral-500 mb-4">Toca el nombre de un producto para editarlo.</p>
 
         <form action={crearProducto} className="rounded-2xl bg-white border border-neutral-200 p-4 space-y-3">
           <input name="nombre" required placeholder="Nombre (ej: Windows 11 Pro)" className={campo} />
@@ -36,7 +38,7 @@ export default async function Productos({ searchParams }) {
           {lista.map((p) => (
             <li key={p.id} className="rounded-2xl bg-white border border-neutral-200 p-4 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-medium truncate">{p.nombre}</p>
+                <Link href={`/admin/productos/${p.id}`} className="block font-medium truncate text-marino hover:underline">{p.nombre}</Link>
                 <p className="text-xs text-neutral-500">
                   {p.categoria || "Sin categoría"} · Bs {p.precio.toFixed(2)} · {p.disponibles} disponibles
                 </p>

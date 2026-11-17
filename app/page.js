@@ -12,7 +12,7 @@ export default async function Home({ searchParams }) {
   const aj = await obtenerAjustes();
   const cats = await sql`select distinct categoria from productos where activo and categoria is not null order by 1`;
   const prods = await sql`
-    select p.slug, p.nombre, p.categoria, p.precio::float as precio,
+    select p.slug, p.nombre, p.categoria, p.imagen_url, p.precio::float as precio,
       (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
     from productos p
     where p.activo and (${cat}::text is null or p.categoria = ${cat})
@@ -43,6 +43,7 @@ export default async function Home({ searchParams }) {
           {prods.length === 0 && <p className="col-span-2 text-sm text-neutral-400">Pronto habrá productos.</p>}
           {prods.map((p) => (
             <Link key={p.slug} href={`/producto/${p.slug}`} className="rounded-2xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition p-4 flex flex-col">
+              {p.imagen_url && <img src={p.imagen_url} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" />}
               <p className="text-xs text-acento">{p.categoria || "Digital"}</p>
               <p className="font-medium mt-1">{p.nombre}</p>
               <p className="text-lg font-semibold mt-auto pt-3">Bs {p.precio.toFixed(2)}</p>

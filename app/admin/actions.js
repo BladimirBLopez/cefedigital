@@ -76,3 +76,26 @@ export async function borrarStock(formData) {
   await sql`delete from stock where id = ${id} and estado = 'disponible'`;
   revalidatePath("/admin/stock");
 }
+
+export async function editarProducto(formData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) redirect("/admin/productos");
+  const base = `/admin/productos/${id}`;
+  const nombre = String(formData.get("nombre") || "").trim();
+  const categoria = String(formData.get("categoria") || "").trim() || null;
+  const descripcion = String(formData.get("descripcion") || "").trim() || null;
+  const precio = Number(String(formData.get("precio") || "").replace(",", "."));
+  const imagen = String(formData.get("imagen_url") || "").trim();
+  if (!nombre) redirect(`${base}?error=nombre`);
+  if (!Number.isFinite(precio) || precio < 0) redirect(`${base}?error=precio`);
+  if (imagen && !/^https:\/\//i.test(imagen)) redirect(`${base}?error=imagen`);
+  await sql`
+    update productos
+    set nombre = ${nombre}, categoria = ${categoria}, descripcion = ${descripcion},
+        precio = ${precio}, imagen_url = ${imagen || null}
+    where id = ${id}`;
+  revalidatePath("/");
+  revalidatePath("/admin/productos");
+  redirect(`${base}?ok=1`);
+}
