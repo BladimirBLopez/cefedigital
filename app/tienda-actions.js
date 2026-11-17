@@ -1,0 +1,32 @@
+"use server";
+
+import crypto from "crypto";
+import { redirect } from "next/navigation";
+import { sql } from "@/lib/db";
+
+export async function crearPedido(formData) {
+  const productoId = Number(formData.get("producto_id"));
+  const cantidad = Number(formData.get("cantidad"));
+  const nombre = String(formData.get("nombre") || "").trim().slice(0, 80);
+  const whatsapp = String(formData.get("whatsapp") || "").replace(/\D/g, "").slice(0, 15);
+  const slug = encodeURIComponent(String(formData.get("slug") || ""));
+
+  if (!Number.isInteger(productoId) || !Number.isInteger(cantidad) || cantidad < 1 || cantidad > 5) redirect("/");
+  if (!nombre || whatsapp.length < 8) redirect(`/producto/${slug}?error=datos`);
+
+  const [p] = await sql`
+    select p.id, p.slug, p.precio::float as precio,
+      (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
+    from productos p where p.id = ${productoId} and p.activo`;
+  if (!p) redirect("/");
+  if (p.disponibles < cantidad) redirect(`/producto/${p.slug}?error=stock`);
+
+  const total = Math.round(p.precio * cantidad * 100) / 100;
+  const codigo = crypto.randomBytes(6).toString("hex").toUpperCase();
+  const [c] = await sql`insert into clientes (nombre, whatsapp) values (${nombre}, ${whatsapp}) returning id`;
+  const [ped] = await sql`insert into pedidos (codigo, cliente_id, total) values (${codigo}, ${c.id}, ${total}) returning id`;
+  await sql`
+    insert into pedido_items (pedido_id, producto_id, cantidad, precio_unit)
+    values (${ped.id}, ${p.id}, ${cantidad}, ${p.precio})`;
+  redirect(`/pedido/${codigo}`);
+}
