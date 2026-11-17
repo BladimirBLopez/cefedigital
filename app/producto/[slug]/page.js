@@ -22,6 +22,18 @@ export default async function Producto({ params, searchParams }) {
   if (!p) notFound();
   const esRecarga = p.tipo === "recarga";
   const max = 5;
+  const planes = await sql`select id, perfil, meses_pagados, meses_gratis, precio::float as precio from planes where producto_id = ${p.id} and activo order by orden, id`;
+  const hayPlanes = planes.length > 0;
+  const desde = hayPlanes ? Math.min(...planes.map((x) => x.precio)) : p.precio;
+  const grupos = [];
+  for (const pl of planes) {
+    let g = grupos.find((x) => x.perfil === pl.perfil);
+    if (!g) {
+      g = { perfil: pl.perfil, items: [] };
+      grupos.push(g);
+    }
+    g.items.push(pl);
+  }
 
   return (
     <>
@@ -32,7 +44,7 @@ export default async function Producto({ params, searchParams }) {
           {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} className="w-full max-h-72 object-cover rounded-xl mb-4" /> : <div className="w-full h-40 rounded-xl mb-4 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
           {p.categoria && <span className="inline-block rounded-full bg-turquesa/25 text-marino text-xs font-medium px-2.5 py-0.5">{p.categoria}</span>}
           <h1 className="text-2xl font-bold mt-2">{p.nombre}</h1>
-          <p className="text-3xl font-bold text-intenso mt-3">Bs {p.precio.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-intenso mt-3">{hayPlanes && <span className="text-base font-medium text-neutral-500">Desde </span>}Bs {desde.toFixed(2)}</p>
           {p.descripcion && <p className="text-sm text-neutral-600 mt-3 whitespace-pre-line">{p.descripcion}</p>}
           <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-marino">{[[FiZap, "Entrega rápida"], [FiMessageCircle, "Por WhatsApp"], [FiShield, "Garantía"]].map(([I, t]) => (<div key={t} className="rounded-xl bg-neutral-50 border border-neutral-200 py-2"><I className="mx-auto mb-1 h-4 w-4 text-electrico" />{t}</div>))}</div>
           <p className="text-xs text-neutral-500 mt-3">Entrega después de confirmar tu pago</p>
@@ -46,18 +58,45 @@ export default async function Producto({ params, searchParams }) {
             <p className="text-xs text-neutral-500">Llena tus datos y te escribimos por WhatsApp cuando confirmemos tu pago.</p>
             <input type="hidden" name="producto_id" value={p.id} />
             <input type="hidden" name="slug" value={p.slug} />
+            {hayPlanes && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-marino">Elige tu plan</h3>
+                {grupos.map((g) => (
+                  <div key={g.perfil}>
+                    <p className="text-xs font-medium text-neutral-500 mb-1.5">{g.perfil}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {g.items.map((pl, i) => (
+                        <label key={pl.id} className="block cursor-pointer">
+                          <input type="radio" name="plan_id" value={pl.id} required defaultChecked={grupos[0] === g && i === 0} className="peer sr-only" />
+                          <div className="rounded-xl border border-neutral-300 px-3 py-2 text-center peer-checked:border-intenso peer-checked:bg-intenso/10 peer-checked:ring-1 peer-checked:ring-intenso">
+                            <p className="text-sm font-semibold text-marino">{pl.meses_pagados} {pl.meses_pagados === 1 ? "mes" : "meses"}</p>
+                            {pl.meses_gratis > 0 && <p className="inline-block rounded-full bg-turquesa/25 text-marino text-[11px] font-medium px-2">+ {pl.meses_gratis} {pl.meses_gratis === 1 ? "mes gratis" : "meses gratis"}</p>}
+                            <p className="text-sm font-bold text-intenso mt-0.5">Bs {pl.precio.toFixed(2)}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <input name="nombre" required maxLength={80} placeholder="Tu nombre" className={campo} />
             <input name="whatsapp" required inputMode="tel" placeholder="Tu WhatsApp (ej: 71234567)" className={campo} />
             {esRecarga && p.campo_cliente && (
               <input name="dato_cliente" required maxLength={100} placeholder={p.campo_cliente} className={campo} />
             )}
+            {hayPlanes ? (
+              <input type="hidden" name="cantidad" value="1" />
+            ) : (
             <select name="cantidad" defaultValue="1" className={campo}>
               {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>{n} {n === 1 ? "unidad" : "unidades"}</option>
               ))}
             </select>
+            )}
             {sp?.error === "datos" && <p className="text-sm text-red-600">Revisa tu nombre y tu número de WhatsApp</p>}
             {sp?.error === "dato" && <p className="text-sm text-red-600">Falta: {p.campo_cliente || "el dato de tu cuenta"}</p>}
+            {sp?.error === "plan" && <p className="text-sm text-red-600">Elige un plan para continuar</p>}
             {sp?.error === "stock" && <p className="text-sm text-red-600">No alcanza el stock para esa cantidad</p>}
             {sp?.error === "limite" && <p className="text-sm text-red-600">Hiciste muchos pedidos seguidos. Espera un rato o escríbenos por WhatsApp.</p>}
             <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3 transition">Pedir ahora</button>

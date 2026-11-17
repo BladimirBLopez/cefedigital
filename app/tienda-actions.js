@@ -22,18 +22,23 @@ export async function crearPedido(formData) {
   if (!p) redirect("/");
   const dato = String(formData.get("dato_cliente") || "").trim().slice(0, 100);
   if (p.tipo === "recarga" && p.campo_cliente && !dato) redirect(`/producto/${p.slug}?error=dato`);
+  const planes = await sql`select id, nombre, precio::float as precio, costo::float as costo from planes where producto_id = ${p.id} and activo`;
+  const plan = planes.find((x) => String(x.id) === String(formData.get("plan_id") || ""));
+  if (planes.length > 0 && !plan) redirect(`/producto/${p.slug}?error=plan`);
+  const cant = plan ? 1 : cantidad;
+  const precioUnit = plan ? plan.precio : p.precio;
 
   const ip = await ipCliente();
   if ((await contar("pedido_ip", ip, 60)) >= 8 || (await contar("pedido_wa", whatsapp, 60)) >= 4) redirect(`/producto/${p.slug}?error=limite`);
   await anotar("pedido_ip", ip);
   await anotar("pedido_wa", whatsapp);
 
-  const total = Math.round(p.precio * cantidad * 100) / 100;
+  const total = Math.round(precioUnit * cant * 100) / 100;
   const codigo = crypto.randomBytes(6).toString("hex").toUpperCase();
   const [c] = await sql`insert into clientes (nombre, whatsapp) values (${nombre}, ${whatsapp}) returning id`;
   const [ped] = await sql`insert into pedidos (codigo, cliente_id, total) values (${codigo}, ${c.id}, ${total}) returning id`;
   await sql`
-    insert into pedido_items (pedido_id, producto_id, cantidad, precio_unit, dato_cliente)
-    values (${ped.id}, ${p.id}, ${cantidad}, ${p.precio}, ${dato || null})`;
+    insert into pedido_items (pedido_id, producto_id, cantidad, precio_unit, dato_cliente, plan_id, plan_nombre, costo_unit)
+    values (${ped.id}, ${p.id}, ${cant}, ${precioUnit}, ${dato || null}, ${plan ? plan.id : null}, ${plan ? plan.nombre : null}, ${plan ? plan.costo : null})`;
   redirect(`/pedido/${codigo}`);
 }
