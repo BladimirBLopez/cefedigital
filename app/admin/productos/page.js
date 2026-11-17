@@ -136,7 +136,7 @@ export default async function Productos({ searchParams }) {
         <ul className="space-y-3">
           {lista.length === 0 && <li className="text-sm text-neutral-500">No hay productos con ese filtro.</li>}
           {lista.map((p) => {
-            const bajo = p.tipo !== "recarga" && p.disponibles <= 2;
+            const bajo = false;
             const ev = estadoVence(p.vence);
             return (
               <li key={p.id} className="rounded-2xl bg-white border border-neutral-200 p-3 flex items-center gap-3">
@@ -158,7 +158,7 @@ export default async function Productos({ searchParams }) {
                   <p className="text-sm font-semibold">
                     Bs {p.precio.toFixed(2)}{" "}
                     <span className={"text-xs font-normal " + (bajo ? "text-red-600" : "text-neutral-500")}>
-                      {p.tipo === "recarga" ? "· Bajo pedido" : `· ${p.disponibles} en stock`}
+                      {p.tipo === "recarga" ? "· Bajo pedido" : "· Entrega por WhatsApp"}
                     </span>
                   </p>
                   {ev.clave !== "sin" && (
