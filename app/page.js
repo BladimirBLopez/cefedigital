@@ -3,12 +3,14 @@ import { sql } from "@/lib/db";
 import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
+import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }) {
   const sp = await searchParams;
   const cat = sp?.cat ? String(sp.cat) : null;
+  const q = sp?.q ? String(sp.q).trim().slice(0, 40) : null;
   const aj = await obtenerAjustes();
   const cats = await sql`select distinct categoria from productos where activo and categoria is not null order by 1`;
   const prods = await sql`
@@ -16,6 +18,7 @@ export default async function Home({ searchParams }) {
       99 as disponibles
     from productos p
     where p.activo and (${cat}::text is null or p.categoria = ${cat})
+      and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
     order by p.id desc`;
   const chip = (activo) =>
     "whitespace-nowrap rounded-full px-4 py-1.5 text-sm border " +
@@ -25,8 +28,22 @@ export default async function Home({ searchParams }) {
     <>
       <TiendaHeader nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <section className="rounded-2xl bg-gradient-to-r from-intenso to-electrico p-6 text-white"><h1 className="text-2xl font-bold">{aj.nombre_tienda}</h1>
-        <p className="text-sm text-white/90 mt-1">Productos digitales con entrega rápida</p><span className="inline-block mt-3 rounded-full bg-turquesa text-marino text-xs font-semibold px-3 py-1">Entrega después de confirmar tu pago</span></section>
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-intenso to-electrico p-6 sm:p-8 text-white"><div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cian/25 blur-2xl" /><h1 className="relative text-2xl sm:text-3xl font-bold">Licencias, streaming y recargas</h1>
+        <p className="relative text-sm text-white/90 mt-2">{aj.nombre_tienda}: productos digitales con entrega rápida por WhatsApp.</p><span className="relative inline-block mt-4 rounded-full bg-turquesa text-marino text-xs font-semibold px-3 py-1">Entrega después de confirmar tu pago</span></section>
+
+        <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+          {[[FiZap, "Entrega rápida"], [FiMessageCircle, "Por WhatsApp"], [FiShield, "Garantía"]].map(([I, t]) => (
+            <div key={t} className="rounded-2xl bg-white border border-neutral-200 py-3 text-xs font-medium text-marino">
+              <I className="mx-auto mb-1 h-5 w-5 text-electrico" />{t}
+            </div>
+          ))}
+        </div>
+
+        <form method="GET" action="/" className="mt-5 flex gap-2">
+          {cat && <input type="hidden" name="cat" value={cat} />}
+          <input name="q" defaultValue={q || ""} placeholder="Buscar producto" className="w-full rounded-xl bg-white border border-neutral-300 px-4 py-2.5 text-sm outline-none focus:border-intenso" />
+          <button className="rounded-xl bg-intenso hover:bg-marino text-white text-sm font-semibold px-5 transition">Buscar</button>
+        </form>
 
         {cats.length > 0 && (
           <div className="flex gap-2 overflow-x-auto mt-5 pb-1">
@@ -39,16 +56,16 @@ export default async function Home({ searchParams }) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mt-5">
-          {prods.length === 0 && <p className="col-span-2 text-sm text-neutral-400">Pronto habrá productos.</p>}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
+          {prods.length === 0 && <p className="col-span-full text-sm text-neutral-500">{q ? "No encontramos productos con ese nombre." : "Pronto habrá productos."}</p>}
           {prods.map((p) => (
-            <Link key={p.slug} href={`/producto/${p.slug}`} className="rounded-2xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition p-4 flex flex-col">
-              {p.imagen_url && <img src={p.imagen_url} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" />}
-              <p className="text-xs text-acento">{p.categoria || "Digital"}</p>
+            <Link key={p.slug} href={`/producto/${p.slug}`} className="group rounded-2xl bg-white border border-neutral-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition p-3 flex flex-col">
+              {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" /> : <div className="w-full aspect-square rounded-xl mb-3 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
+              <span className="self-start rounded-full bg-turquesa/25 text-marino text-[11px] font-medium px-2 py-0.5">{p.categoria || "Digital"}</span>
               <p className="font-medium mt-1">{p.nombre}</p>
-              <p className="text-lg font-semibold mt-auto pt-3">Bs {p.precio.toFixed(2)}</p>
-              <p className={"text-xs mt-1 " + (p.disponibles > 0 ? "text-marino font-medium" : "text-neutral-500")}>
-                {p.disponibles > 0 ? "Disponible" : "Agotado"}
+              <p className="text-lg font-bold text-intenso mt-auto pt-3">Bs {p.precio.toFixed(2)}</p>
+              <p className={"mt-2 rounded-xl bg-intenso group-hover:bg-marino text-white text-center text-sm font-semibold py-2 transition"}>
+                Comprar
               </p>
             </Link>
           ))}
