@@ -6,7 +6,9 @@ import SubirFoto from "@/components/SubirFoto";
 import CamposProducto from "@/components/CamposProducto";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
-import { crearProducto, cambiarActivo } from "../actions";
+import { crearProducto } from "../actions";
+import Interruptor from "@/components/Interruptor";
+import BorrarProducto from "@/components/BorrarProducto";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,8 @@ const ERRORES = {
   precio: "El precio no es válido",
   vence: "La fecha de vencimiento no es válida",
   foto: "No se pudo subir la foto (máx. 4 MB)",
+  pedidos: "Ese producto ya tiene pedidos: no se borra para no perder tus ventas. Ocúltalo con el interruptor.",
+  borrar: "No se pudo borrar. Intenta otra vez.",
 };
 
 export default async function Productos({ searchParams }) {
@@ -25,6 +29,7 @@ export default async function Productos({ searchParams }) {
   const sp = await searchParams;
   const q = String(sp?.q || "").trim().toLowerCase();
   const estado = ["venta", "oculto", "agotado", "vencen"].includes(sp?.estado) ? sp.estado : "todos";
+  const cats = String(sp?.cat || "").split("|").map((c) => c.trim()).filter(Boolean);
 
   const todos = await sql`
     select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.vence::text as vence,
@@ -44,6 +49,7 @@ export default async function Productos({ searchParams }) {
 
   const lista = todos.filter((p) => {
     if (q && !`${p.nombre} ${p.categoria || ""}`.toLowerCase().includes(q)) return false;
+    if (cats.length && !cats.includes(p.categoria || "Sin categoría")) return false;
     if (estado === "venta") return p.activo;
     if (estado === "oculto") return !p.activo;
     if (estado === "agotado") return agotado(p);
@@ -55,8 +61,19 @@ export default async function Productos({ searchParams }) {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
     if (e !== "todos") u.set("estado", e);
+    if (cats.length) u.set("cat", cats.join("|"));
     const s = u.toString();
     return "/admin/productos" + (s ? "?" + s : "");
+  };
+  const categorias = [...new Set(todos.map((p) => p.categoria || "Sin categoría"))].sort((a, b) => a.localeCompare(b, "es"));
+  const hrefCat = (c) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (estado !== "todos") u.set("estado", estado);
+    const nuevas = c === null ? [] : cats.includes(c) ? cats.filter((x) => x !== c) : [...cats, c];
+    if (nuevas.length) u.set("cat", nuevas.join("|"));
+    const t = u.toString();
+    return "/admin/productos" + (t ? "?" + t : "");
   };
   const chips = [
     ["todos", "Todos"],
@@ -87,7 +104,7 @@ export default async function Productos({ searchParams }) {
           ))}
         </div>
 
-        <details open={!!sp?.error} className="rounded-2xl bg-white border border-neutral-200 mb-5">
+        <details open={!!sp?.error && !["pedidos", "borrar"].includes(sp.error)} className="rounded-2xl bg-white border border-neutral-200 mb-5">
           <summary className="cursor-pointer select-none px-4 py-3 font-medium text-marino">+ Registrar producto</summary>
           <form action={crearProducto} className="p-4 pt-0 space-y-3">
             <SubirFoto />
@@ -103,10 +120,12 @@ export default async function Productos({ searchParams }) {
             <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar producto</button>
           </form>
         </details>
-        {sp?.ok && <p className="text-sm text-marino mb-3">Producto guardado</p>}
+        {sp?.ok && <p className="text-sm text-marino mb-3">{sp.ok === "borrado" ? "Producto borrado" : "Producto guardado"}</p>}
+        {["pedidos", "borrar"].includes(sp?.error) && <p className="text-sm text-red-600 mb-3">{ERRORES[sp.error]}</p>}
 
         <form method="get" className="flex gap-2 mb-3">
           {estado !== "todos" && <input type="hidden" name="estado" value={estado} />}
+          {cats.length > 0 && <input type="hidden" name="cat" value={cats.join("|")} />}
           <input name="q" defaultValue={q} placeholder="Buscar producto o categoría" className={campo + " !py-2"} />
           <button className="rounded-xl bg-marino text-white px-4 text-sm">Buscar</button>
         </form>
@@ -125,6 +144,35 @@ export default async function Productos({ searchParams }) {
             </Link>
           ))}
         </div>
+
+        {categorias.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs text-neutral-500 mb-1">Categorías (marca las que quieras ver)</p>
+            <div className="flex gap-2 overflow-x-auto">
+              <Link
+                href={hrefCat(null)}
+                className={
+                  "shrink-0 rounded-full px-3 py-1 text-sm border " +
+                  (cats.length === 0 ? "bg-marino text-white border-marino" : "bg-white border-neutral-300 text-neutral-600")
+                }
+              >
+                Todas
+              </Link>
+              {categorias.map((c) => (
+                <Link
+                  key={c}
+                  href={hrefCat(c)}
+                  className={
+                    "shrink-0 rounded-full px-3 py-1 text-sm border " +
+                    (cats.includes(c) ? "bg-marino text-white border-marino" : "bg-white border-neutral-300 text-neutral-600")
+                  }
+                >
+                  {c}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         <ul className="space-y-3">
           {lista.length === 0 && <li className="text-sm text-neutral-500">No hay productos con ese filtro.</li>}
@@ -158,17 +206,10 @@ export default async function Productos({ searchParams }) {
                     <span className={"inline-block mt-1 text-xs rounded-full px-2 py-0.5 " + ev.clase}>{ev.texto}</span>
                   )}
                 </div>
-                <form action={cambiarActivo}>
-                  <input type="hidden" name="id" value={p.id} />
-                  <button
-                    className={
-                      "text-xs rounded-full px-3 py-1 border " +
-                      (p.activo ? "border-esmeralda text-marino" : "border-neutral-300 text-neutral-500")
-                    }
-                  >
-                    {p.activo ? "A la venta" : "Oculto"}
-                  </button>
-                </form>
+                <div className="flex flex-col items-end gap-2">
+                  <Interruptor id={p.id} activo={p.activo} />
+                  <BorrarProducto id={p.id} nombre={p.nombre} />
+                </div>
               </li>
             );
           })}
