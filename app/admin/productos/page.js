@@ -111,10 +111,10 @@ export default async function Productos({ searchParams }) {
           <form action={crearProducto} className="p-4 pt-0 space-y-3">
             <SubirFoto />
             <input name="nombre" required placeholder="Nombre (ej: Windows 11 Pro)" className={campo} />
-            <input name="categoria" placeholder="Categoría de la portada (ej: Streaming, Windows)" className={campo} />
+            <input name="categoria" placeholder="Categoría (ej: Streaming)" className={campo} />
             <CamposProducto conPlan />
             <label className="block text-xs text-neutral-500">
-              Vence lo que compraste al proveedor (opcional)
+              Vence (proveedor, opcional)
               <input name="vence" type="date" className={campo + " mt-1"} />
             </label>
             <textarea name="descripcion" rows={2} placeholder="Descripción corta" className={campo} />

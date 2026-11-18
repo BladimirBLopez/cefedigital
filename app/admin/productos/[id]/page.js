@@ -54,11 +54,11 @@ export default async function EditarProducto({ params, searchParams }) {
           <input type="hidden" name="imagen_url" value={p.imagen_url || ""} />
           <SubirFoto actual={p.imagen_url || ""} />
           <input name="nombre" required defaultValue={p.nombre} placeholder="Nombre" className={campo} />
-          <input name="categoria" defaultValue={p.categoria || ""} placeholder="Categoría de la portada (ej: Streaming, Windows)" className={campo} />
+          <input name="categoria" defaultValue={p.categoria || ""} placeholder="Categoría (ej: Streaming)" className={campo} />
           <CamposProducto tipo={p.tipo} campoCliente={p.campo_cliente} duracion={p.duracion_dias} />
           <input name="precio" required inputMode="decimal" defaultValue={p.precio} placeholder="Precio en Bs" className={campo} />
           <label className="block text-xs text-neutral-500">
-            Vence lo que compraste al proveedor (vacío = no vence)
+            Vence (proveedor)
             <input name="vence" type="date" defaultValue={p.vence || ""} className={campo + " mt-1"} />
           </label>
           <textarea name="descripcion" rows={2} defaultValue={p.descripcion || ""} placeholder="Descripción" className={campo} />
