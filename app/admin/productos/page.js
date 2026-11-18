@@ -23,6 +23,7 @@ const ERRORES = {
   pedidos: "Ese producto ya tiene pedidos: no se borra para no perder tus ventas. Ocúltalo con el interruptor.",
   borrar: "No se pudo borrar. Intenta otra vez.",
   planes: "Escribe al menos un precio para la cuenta.",
+  planesdb: "No se pudieron guardar los planes. No se creó nada, intenta otra vez.",
   repetidas: "Repetiste un plan (mismas pantallas y duración). Cambia uno.",
 };
 

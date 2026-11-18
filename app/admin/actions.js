@@ -93,7 +93,7 @@ export async function crearProducto(formData) {
         pant,
         m,
         precio: Math.round(pr * 100) / 100,
-        costo: co === null ? null : Math.round(co * 100) / 100,
+        costo: co === null ? 0 : Math.round(co * 100) / 100,
       });
     }
     if (planesNuevos.length === 0) redirect("/admin/productos?error=planes");
@@ -122,11 +122,22 @@ export async function crearProducto(formData) {
   if (p.duracion && r[0]?.id) await sql`update productos set duracion_dias = ${p.duracion} where id = ${r[0].id}`;
   if (String(formData.get("activo")) === "0" && r[0]?.id) await sql`update productos set activo = false where id = ${r[0].id}`;
   if (p.tipo === "cuenta" && r[0]?.id) {
-    for (const x of planesNuevos) {
-      const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"}`;
-      await sql`
-        insert into planes (producto_id, perfil, pantallas, meses_pagados, meses_gratis, duracion_dias, nombre, costo, precio, activo, orden)
-        values (${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0}, ${x.m * 30}, ${nombrePlan}, ${x.costo}, ${x.precio}, true, ${x.pant * 100 + x.m})`;
+    let falloPlanes = false;
+    try {
+      for (const x of planesNuevos) {
+        const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"}`;
+        await sql`
+          insert into planes (producto_id, perfil, pantallas, meses_pagados, meses_gratis, duracion_dias, nombre, costo, precio, activo, orden)
+          values (${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0}, ${x.m * 30}, ${nombrePlan}, ${x.costo}, ${x.precio}, true, ${x.pant * 100 + x.m})`;
+      }
+    } catch (e) {
+      console.error("crear planes fallo", e);
+      falloPlanes = true;
+    }
+    if (falloPlanes) {
+      await sql`delete from planes where producto_id = ${r[0].id}`;
+      await sql`delete from productos where id = ${r[0].id}`;
+      redirect("/admin/productos?error=planesdb");
     }
   }
   await anotar(
