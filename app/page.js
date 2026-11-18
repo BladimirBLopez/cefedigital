@@ -15,7 +15,9 @@ export default async function Home({ searchParams }) {
   const aj = await obtenerAjustes();
   const cats = await sql`select distinct categoria from productos where activo and categoria is not null order by 1`;
   const prods = await sql`
-    select p.slug, p.nombre, p.categoria, p.imagen_url, p.precio::float as precio,
+    select p.slug, p.nombre, p.categoria, p.imagen_url,
+      coalesce((select min(pl.precio) from planes pl where pl.producto_id = p.id and pl.activo), p.precio)::float as precio,
+      exists (select 1 from planes pl where pl.producto_id = p.id and pl.activo) as con_planes,
       99 as disponibles
     from productos p
     where p.activo and (${cat}::text is null or p.categoria = ${cat})
@@ -64,7 +66,7 @@ export default async function Home({ searchParams }) {
               {p.imagen_url ? <img src={optimizar(p.imagen_url, 500)} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" /> : <div className="w-full aspect-square rounded-xl mb-3 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
               <span className="self-start rounded-full bg-turquesa/25 text-marino text-[11px] font-medium px-2 py-0.5">{p.categoria || "Digital"}</span>
               <p className="font-medium mt-1">{p.nombre}</p>
-              <p className="text-lg font-bold text-intenso mt-auto pt-3">Bs {p.precio.toFixed(2)}</p>
+              <p className="text-lg font-bold text-intenso mt-auto pt-3">{p.con_planes && <span className="text-xs font-medium text-neutral-500">Desde </span>}Bs {p.precio.toFixed(2)}</p>
               <p className={"mt-2 rounded-xl bg-intenso group-hover:bg-marino text-white text-center text-sm font-semibold py-2 transition"}>
                 Comprar
               </p>
