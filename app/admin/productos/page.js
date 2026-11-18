@@ -23,7 +23,7 @@ const ERRORES = {
   pedidos: "Ese producto ya tiene pedidos: no se borra para no perder tus ventas. Ocúltalo con el interruptor.",
   borrar: "No se pudo borrar. Intenta otra vez.",
   planes: "Escribe al menos un precio para la cuenta.",
-  repetidas: "Repetiste la misma cantidad de pantallas. Cambia una.",
+  repetidas: "Repetiste un plan (mismas pantallas y duración). Cambia uno.",
 };
 
 export default async function Productos({ searchParams }) {

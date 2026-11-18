@@ -73,26 +73,28 @@ export async function crearProducto(formData) {
       const n = Number(t);
       return Number.isFinite(n) && n >= 0 ? n : NaN;
     };
-    const pants = formData.getAll("pantallas").map(Number);
-    const mesesSel = [...new Set(formData.getAll("meses").map(Number).filter((m) => okInt(m, 1, 36)))].sort((a, b) => a - b);
-    if (new Set(pants).size !== pants.length) redirect("/admin/productos?error=repetidas");
+    const pants = formData.getAll("plan_pant").map(Number);
+    const mesesF = formData.getAll("plan_meses").map(Number);
+    const preciosF = formData.getAll("plan_precio");
+    const costosF = formData.getAll("plan_costo");
+    const vistos = new Set();
     for (let i = 0; i < pants.length; i++) {
       const pant = pants[i];
-      if (!okInt(pant, 1, 10)) continue;
-      const perfil = pant === 1 ? "1 pantalla" : `${pant} pantallas`;
-      for (const m of mesesSel) {
-        const pr = dinero(formData.get(`precio_${i}_${m}`));
-        const co = dinero(formData.get(`costo_${i}_${m}`));
-        if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos?error=precio");
-        if (pr === null) continue;
-        planesNuevos.push({
-          perfil,
-          pant,
-          m,
-          precio: Math.round(pr * 100) / 100,
-          costo: co === null ? null : Math.round(co * 100) / 100,
-        });
-      }
+      const m = mesesF[i];
+      if (!okInt(pant, 1, 10) || !okInt(m, 1, 36)) continue;
+      const pr = dinero(preciosF[i]);
+      const co = dinero(costosF[i]);
+      if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos?error=precio");
+      if (pr === null) continue;
+      if (vistos.has(`${pant}-${m}`)) redirect("/admin/productos?error=repetidas");
+      vistos.add(`${pant}-${m}`);
+      planesNuevos.push({
+        perfil: pant === 1 ? "1 pantalla" : `${pant} pantallas`,
+        pant,
+        m,
+        precio: Math.round(pr * 100) / 100,
+        costo: co === null ? null : Math.round(co * 100) / 100,
+      });
     }
     if (planesNuevos.length === 0) redirect("/admin/productos?error=planes");
     precioProducto = Math.min(...planesNuevos.map((x) => x.precio));
