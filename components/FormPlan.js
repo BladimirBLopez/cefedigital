@@ -11,6 +11,7 @@ export default function FormPlan({ action, productoId }) {
   const [pag, setPag] = useState(1);
   const [precio, setPrecio] = useState("");
   const [costo, setCosto] = useState("");
+  const [compartida, setCompartida] = useState(false);
 
   const p = Number(String(precio).replace(",", "."));
   const c = Number(String(costo).replace(",", "."));
@@ -22,6 +23,23 @@ export default function FormPlan({ action, productoId }) {
     <form action={action} className="rounded-2xl bg-white border border-neutral-200 p-4 space-y-3">
       <input type="hidden" name="producto_id" value={productoId} />
       <h2 className="font-semibold">Agregar plan</h2>
+
+      <input type="hidden" name="compartida" value={compartida ? "true" : "false"} />
+
+      <div className="rounded-xl border border-neutral-200 p-3 space-y-1">
+        <label className="flex items-center gap-2 text-sm text-neutral-700">
+          <input
+            type="checkbox"
+            checked={compartida}
+            onChange={(e) => setCompartida(e.target.checked)}
+            className="h-4 w-4 rounded border-neutral-300 text-intenso focus:ring-intenso"
+          />
+          Cuenta compartida
+        </label>
+        <p className="text-xs text-neutral-500">
+          Marcado: perfil compartido. Sin marcar: cuenta completa.
+        </p>
+      </div>
 
       <label className="block text-xs text-neutral-500">
         Dispositivos o pantallas

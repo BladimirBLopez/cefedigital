@@ -86,6 +86,7 @@ export async function crearProducto(formData) {
     const mesesF = formData.getAll("plan_meses").map(Number);
     const preciosF = formData.getAll("plan_precio");
     const costosF = formData.getAll("plan_costo");
+    const compartidasF = formData.getAll("plan_compartida");
     const vistos = new Set();
     for (let i = 0; i < pants.length; i++) {
       const pant = pants[i];
@@ -93,14 +94,19 @@ export async function crearProducto(formData) {
       if (!okInt(pant, 1, 10) || !okInt(m, 1, 36)) continue;
       const pr = dinero(preciosF[i]);
       const co = dinero(costosF[i]);
+      const compartida = String(compartidasF[i] ?? "false") === "true";
       if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos/nuevo?error=precio");
       if (pr === null) continue;
-      if (vistos.has(`${pant}-${m}`)) redirect("/admin/productos/nuevo?error=repetidas");
-      vistos.add(`${pant}-${m}`);
+
+      const clavePlan = `${pant}-${m}-${compartida ? "1" : "0"}`;
+      if (vistos.has(clavePlan)) redirect("/admin/productos/nuevo?error=repetidas");
+      vistos.add(clavePlan);
+
       planesNuevos.push({
         perfil: pant === 1 ? "1 pantalla" : `${pant} pantallas`,
         pant,
         m,
+        compartida,
         precio: Math.round(pr * 100) / 100,
         costo: co === null ? 0 : Math.round(co * 100) / 100,
       });
@@ -135,10 +141,18 @@ export async function crearProducto(formData) {
     let falloPlanes = false;
     try {
       for (const x of planesNuevos) {
-        const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"}`;
+        const modalidad = x.compartida ? "Perfil compartido" : "Cuenta completa";
+        const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"} · ${modalidad}`;
         await sql`
-          insert into planes (producto_id, perfil, pantallas, meses_pagados, meses_gratis, duracion_dias, nombre, costo, precio, activo, orden)
-          values (${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0}, ${x.m * 30}, ${nombrePlan}, ${x.costo}, ${x.precio}, true, ${x.pant * 100 + x.m})`;
+          insert into planes (
+            producto_id, perfil, pantallas, meses_pagados, meses_gratis,
+            duracion_dias, nombre, costo, precio, compartida, activo, orden
+          )
+          values (
+            ${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0},
+            ${x.m * 30}, ${nombrePlan}, ${x.costo}, ${x.precio},
+            ${x.compartida}, true, ${x.pant * 100 + x.m}
+          )`;
       }
     } catch (e) {
       console.error("crear planes fallo", e);

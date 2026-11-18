@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { asegurarEsquema } from "@/lib/esquema";
 
 const ruta = (id) => `/admin/productos/${id}/planes`;
 
@@ -29,6 +30,7 @@ function dinero(v) {
 
 export async function agregarPlan(formData) {
   await requireAdmin();
+  await asegurarEsquema();
 
   const pid = Number(formData.get("producto_id"));
   if (!Number.isInteger(pid)) redirect("/admin/productos");
@@ -37,6 +39,7 @@ export async function agregarPlan(formData) {
   const pagados = entero(formData.get("meses_pagados"), 1, 36);
   const precio = dinero(formData.get("precio"));
   const costo = dinero(formData.get("costo"));
+  const compartida = String(formData.get("compartida") || "false") === "true";
 
   if (!pantallas || !pagados) redirect(`${ruta(pid)}?error=datos`);
   if (precio === null || Number.isNaN(precio)) redirect(`${ruta(pid)}?error=precio`);
@@ -47,23 +50,25 @@ export async function agregarPlan(formData) {
     where producto_id = ${pid}
       and pantallas = ${pantallas}
       and meses_pagados = ${pagados}
+      and compartida = ${compartida}
     limit 1`;
 
   if (dup.length > 0) redirect(`${ruta(pid)}?error=repetido`);
 
   const perfil = pantallas === 1 ? "1 pantalla" : `${pantallas} pantallas`;
-  const nombre = `${perfil} · ${pagados} ${pagados === 1 ? "mes" : "meses"}`;
+  const modalidad = compartida ? "Perfil compartido" : "Cuenta completa";
+  const nombre = `${perfil} · ${pagados} ${pagados === 1 ? "mes" : "meses"} · ${modalidad}`;
   const duracion = pagados * 30;
   const orden = pantallas * 100 + pagados;
 
   await sql`
     insert into planes (
       producto_id, perfil, pantallas, meses_pagados, meses_gratis,
-      duracion_dias, nombre, costo, precio, activo, orden
+      duracion_dias, nombre, costo, precio, compartida, activo, orden
     )
     values (
       ${pid}, ${perfil}, ${pantallas}, ${pagados}, 0,
-      ${duracion}, ${nombre}, ${costo}, ${precio}, true, ${orden}
+      ${duracion}, ${nombre}, ${costo}, ${precio}, ${compartida}, true, ${orden}
     )`;
 
   await sincronizarPrecio(pid);
@@ -94,6 +99,84 @@ export async function editarPrecioPlan(formData) {
   revalidatePath(ruta(pid));
   revalidatePath("/");
   redirect(`${ruta(pid)}?aviso=plan_actualizado`);
+}
+
+export async function editarModalidadPlan(formData) {
+  await requireAdmin();
+  await asegurarEsquema();
+
+  const pid = Number(formData.get("producto_id"));
+  const id = Number(formData.get("id"));
+
+  if (!Number.isInteger(pid) || !Number.isInteger(id)) {
+    redirect("/admin/productos");
+  }
+
+  const valor = String(formData.get("compartida") ?? "");
+
+  let compartida;
+
+  if (valor === "true") {
+    compartida = true;
+  } else if (valor === "false") {
+    compartida = false;
+  } else if (valor === "null") {
+    compartida = null;
+  } else {
+    redirect(`${ruta(pid)}?error=modalidad`);
+  }
+
+  const [plan] = await sql`
+    select pl.id, pl.perfil, pl.pantallas, pl.meses_pagados,
+           pr.slug
+    from planes pl
+    join productos pr on pr.id = pl.producto_id
+    where pl.id = ${id}
+      and pl.producto_id = ${pid}
+  `;
+
+  if (!plan) {
+    redirect(`${ruta(pid)}?error=plan_no_existe`);
+  }
+
+  const duplicado = await sql`
+    select 1
+    from planes
+    where producto_id = ${pid}
+      and pantallas = ${plan.pantallas}
+      and meses_pagados = ${plan.meses_pagados}
+      and compartida is not distinct from ${compartida}
+      and id <> ${id}
+    limit 1
+  `;
+
+  if (duplicado.length > 0) {
+    redirect(`${ruta(pid)}?error=repetido`);
+  }
+
+  const base = `${plan.perfil} · ${plan.meses_pagados} ${
+    plan.meses_pagados === 1 ? "mes" : "meses"
+  }`;
+
+  const nombre = compartida === null
+    ? base
+    : `${base} · ${
+        compartida ? "Perfil compartido" : "Cuenta completa"
+      }`;
+
+  await sql`
+    update planes
+    set compartida = ${compartida},
+        nombre = ${nombre}
+    where id = ${id}
+      and producto_id = ${pid}
+  `;
+
+  revalidatePath(ruta(pid));
+  revalidatePath(`/producto/${plan.slug}`);
+  revalidatePath("/");
+
+  redirect(`${ruta(pid)}?aviso=modalidad_actualizada`);
 }
 
 export async function cambiarActivoPlan(formData) {

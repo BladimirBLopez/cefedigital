@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { sql } from "@/lib/db";
+import { asegurarEsquema } from "@/lib/esquema";
 import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
 import FormPlan from "@/components/FormPlan";
-import { agregarPlan, editarPrecioPlan, cambiarActivoPlan, borrarPlan } from "@/app/admin/acciones-planes";
+import { agregarPlan, editarPrecioPlan, editarModalidadPlan, cambiarActivoPlan, borrarPlan } from "@/app/admin/acciones-planes";
 
 export const dynamic = "force-dynamic";
 
@@ -13,15 +14,21 @@ const ERRORES = {
   datos: "Revisa pantallas y meses",
   precio: "El precio no es válido",
   costo: "El costo no es válido",
-  repetido: "Ya existe un plan con esas pantallas y duración",
+  modalidad: "Selecciona una modalidad válida.",
+  repetido: "Ya existe un plan con esa modalidad, pantallas y duración.",
   usado: "Este plan ya tiene pedidos. No se puede borrar, mejor desactívalo.",
   plan_no_existe: "El plan ya no existe."
+};
+
+const AVISOS = {
+  modalidad_actualizada: "La modalidad del plan se actualizó correctamente."
 };
 
 const mini = "w-24 rounded-lg bg-neutral-100 border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-intenso";
 
 export default async function Planes({ params, searchParams }) {
   await requireAdmin();
+  await asegurarEsquema();
 
   const { id: idTxt } = await params;
   const sp = await searchParams;
@@ -34,7 +41,7 @@ export default async function Planes({ params, searchParams }) {
 
   const planes = await sql`
     select id, perfil, pantallas, meses_pagados, duracion_dias,
-           costo::float as costo, precio::float as precio, activo
+           costo::float as costo, precio::float as precio, compartida, activo
     from planes where producto_id = ${id}
     order by orden, id`;
 
@@ -48,7 +55,17 @@ export default async function Planes({ params, searchParams }) {
 
         <h1 className="text-xl font-semibold">Planes de {prod.nombre}</h1>
 
-        {ERRORES[sp?.error] && <p className="text-sm text-red-600">{ERRORES[sp.error]}</p>}
+        {ERRORES[sp?.error] && (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {ERRORES[sp.error]}
+          </p>
+        )}
+
+        {AVISOS[sp?.aviso] && (
+          <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            {AVISOS[sp.aviso]}
+          </p>
+        )}
 
         <FormPlan action={agregarPlan} productoId={id} />
 
@@ -61,6 +78,11 @@ export default async function Planes({ params, searchParams }) {
 
           {planes.map((p) => {
             const gan = p.costo == null ? null : p.precio - p.costo;
+            const modalidad = p.compartida === null
+              ? "Sin clasificar"
+              : p.compartida
+                ? "Perfil compartido"
+                : "Cuenta completa";
 
             return (
               <li key={p.id} className={"rounded-2xl bg-white border border-neutral-200 p-4 " + (p.activo ? "" : "opacity-60")}>
@@ -69,7 +91,7 @@ export default async function Planes({ params, searchParams }) {
                 </p>
 
                 <p className="text-xs text-neutral-500 mt-1">
-                  {p.duracion_dias} días de servicio
+                  {modalidad} · {p.duracion_dias} días de servicio
                   {gan !== null && <> · Ganancia Bs {gan.toFixed(2)}</>}
                 </p>
 
@@ -89,6 +111,37 @@ export default async function Planes({ params, searchParams }) {
 
                   <button className="text-xs rounded-full bg-intenso hover:bg-marino text-white font-semibold px-3 py-2">
                     Guardar
+                  </button>
+                </form>
+
+                <form
+                  action={editarModalidadPlan}
+                  className="flex flex-wrap items-end gap-2 mt-3"
+                >
+                  <input type="hidden" name="producto_id" value={id} />
+                  <input type="hidden" name="id" value={p.id} />
+
+                  <label className="flex-1 min-w-[180px] text-[11px] text-neutral-500">
+                    Cambiar modalidad
+                    <select
+                      name="compartida"
+                      defaultValue={
+                        p.compartida === true
+                          ? "true"
+                          : p.compartida === false
+                            ? "false"
+                            : "null"
+                      }
+                      className="mt-0.5 w-full rounded-lg bg-neutral-100 border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-intenso"
+                    >
+                      <option value="false">Cuenta completa</option>
+                      <option value="true">Perfil compartido</option>
+                      <option value="null">Sin clasificar</option>
+                    </select>
+                  </label>
+
+                  <button className="text-xs rounded-full bg-intenso hover:bg-marino text-white font-semibold px-4 py-2.5">
+                    Guardar modalidad
                   </button>
                 </form>
 

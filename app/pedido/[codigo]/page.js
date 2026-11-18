@@ -30,7 +30,8 @@ export default async function Pedido({ params, searchParams }) {
   if (!ped) notFound();
 
   const items = await sql`
-    select pi.cantidad, pi.dato_cliente, pi.plan_nombre, pr.tipo, pr.nombre
+    select pi.cantidad, pi.dato_cliente, pi.plan_nombre,
+           pi.plan_compartida, pr.tipo, pr.nombre
     from pedido_items pi
     join productos pr on pr.id = pi.producto_id
     where pi.pedido_id = ${ped.id}`;
@@ -81,6 +82,12 @@ export default async function Pedido({ params, searchParams }) {
               <li key={k}>
                 {i.cantidad} x {i.nombre}
                 {i.plan_nombre && <span className="text-xs text-neutral-500"> · {i.plan_nombre}</span>}
+                {i.plan_compartida !== null && i.plan_compartida !== undefined &&
+                  !String(i.plan_nombre || "").includes(i.plan_compartida ? "Perfil compartido" : "Cuenta completa") && (
+                    <span className="text-xs text-neutral-500">
+                      {" · "}{i.plan_compartida ? "Perfil compartido" : "Cuenta completa"}
+                    </span>
+                  )}
                 {i.dato_cliente && <span className="font-mono text-xs text-neutral-500"> [ID: {i.dato_cliente}]</span>}
               </li>
             ))}

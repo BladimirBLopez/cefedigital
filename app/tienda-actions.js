@@ -37,6 +37,8 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
     dato_cliente: l.dato || null,
     plan_id: l.plan ? Number(l.plan.id) : null,
     plan_nombre: l.plan ? l.plan.nombre : null,
+    plan_compartida: l.plan && l.plan.compartida != null
+      ? l.plan.compartida === true : null,
     costo_unit: l.plan && l.plan.costo != null
       ? Number(l.plan.costo) : null,
     duracion_dias: l.duracionDias == null
@@ -58,12 +60,12 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
     nuevos_items AS (
       INSERT INTO pedido_items (
         pedido_id, producto_id, cantidad, precio_unit,
-        dato_cliente, plan_id, plan_nombre, costo_unit,
+        dato_cliente, plan_id, plan_nombre, plan_compartida, costo_unit,
         duracion_dias
       )
       SELECT
         np.id, i.producto_id, i.cantidad, i.precio_unit,
-        i.dato_cliente, i.plan_id, i.plan_nombre,
+        i.dato_cliente, i.plan_id, i.plan_nombre, i.plan_compartida,
         i.costo_unit, i.duracion_dias
       FROM nuevo_pedido np
       CROSS JOIN jsonb_to_recordset(${JSON.stringify(registros)}::jsonb)
@@ -74,6 +76,7 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
         dato_cliente text,
         plan_id integer,
         plan_nombre text,
+        plan_compartida boolean,
         costo_unit numeric,
         duracion_dias integer
       )
@@ -126,7 +129,7 @@ export async function crearPedido(formData) {
 
   const planes = await sql`
     SELECT id, nombre, precio::float AS precio,
-           costo::float AS costo, duracion_dias
+           costo::float AS costo, duracion_dias, compartida
     FROM planes
     WHERE producto_id = ${p.id} AND activo
   `;
@@ -217,7 +220,7 @@ export async function crearPedidoCarrito(formData) {
 
     const planes = await sql`
       SELECT id, nombre, precio::float AS precio,
-             costo::float AS costo, duracion_dias
+             costo::float AS costo, duracion_dias, compartida
       FROM planes
       WHERE producto_id = ${p.id} AND activo
     `;

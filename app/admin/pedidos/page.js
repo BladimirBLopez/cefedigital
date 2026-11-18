@@ -49,7 +49,20 @@ export default async function Pedidos({ searchParams }) {
 
   const pedidos = await sql`
     select p.id, p.codigo, p.total::float as total, p.estado, p.creado_en, p.entregado_en, c.nombre, c.whatsapp,
-      (select string_agg(pi.cantidad || ' x ' || pr.nombre || coalesce(' (' || pi.plan_nombre || ')', '') || coalesce(' [ID: ' || pi.dato_cliente || ']', ''), ', ')
+      (select string_agg(
+        pi.cantidad || ' x ' || pr.nombre ||
+        coalesce(
+          ' (' || pi.plan_nombre ||
+          case
+            when pi.plan_compartida is true and pi.plan_nombre not ilike '%Perfil compartido%' then ' · Perfil compartido'
+            when pi.plan_compartida is false and pi.plan_nombre not ilike '%Cuenta completa%' then ' · Cuenta completa'
+            else ''
+          end || ')',
+          ''
+        ) ||
+        coalesce(' [ID: ' || pi.dato_cliente || ']', ''),
+        ', '
+      )
          from pedido_items pi join productos pr on pr.id = pi.producto_id
          where pi.pedido_id = p.id) as detalle,
       (select sum(pi.cantidad * (pi.precio_unit - pi.costo_unit))::float
