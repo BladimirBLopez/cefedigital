@@ -83,6 +83,21 @@ export async function crearProducto(formData) {
       returning id`;
   }
   if (p.duracion && r[0]?.id) await sql`update productos set duracion_dias = ${p.duracion} where id = ${r[0].id}`;
+  if (p.tipo === "cuenta" && r[0]?.id && formData.get("meses_pagados")) {
+    const pant = Number(formData.get("pantallas"));
+    const pag = Number(formData.get("meses_pagados"));
+    const gra = Number(formData.get("meses_gratis") || 0);
+    const cTxt = String(formData.get("plan_costo") || "").trim().replace(",", ".");
+    const costo = cTxt === "" ? null : Number(cTxt);
+    const okInt = (n, a, b) => Number.isInteger(n) && n >= a && n <= b;
+    if (okInt(pant, 1, 10) && okInt(pag, 1, 36) && okInt(gra, 0, 12) && (costo === null || (Number.isFinite(costo) && costo >= 0))) {
+      const perfil = pant === 1 ? "1 pantalla" : `${pant} pantallas`;
+      const nombrePlan = `${perfil} · ${pag} ${pag === 1 ? "mes" : "meses"}${gra > 0 ? ` + ${gra} gratis` : ""}`;
+      await sql`
+        insert into planes (producto_id, perfil, pantallas, meses_pagados, meses_gratis, duracion_dias, nombre, costo, precio, activo, orden)
+        values (${r[0].id}, ${perfil}, ${pant}, ${pag}, ${gra}, ${(pag + gra) * 30}, ${nombrePlan}, ${costo}, ${p.precio}, true, ${pant * 100 + pag})`;
+    }
+  }
   await anotar(
     "crear",
     "producto",

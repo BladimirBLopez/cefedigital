@@ -93,8 +93,7 @@ export default async function Productos({ searchParams }) {
             <SubirFoto />
             <input name="nombre" required placeholder="Nombre (ej: Windows 11 Pro)" className={campo} />
             <input name="categoria" placeholder="Categoría de la portada (ej: Streaming, Windows)" className={campo} />
-            <CamposProducto />
-            <input name="precio" required inputMode="decimal" placeholder="Precio en Bs" className={campo} />
+            <CamposProducto conPlan />
             <label className="block text-xs text-neutral-500">
               Vence lo que compraste al proveedor (opcional)
               <input name="vence" type="date" className={campo + " mt-1"} />
