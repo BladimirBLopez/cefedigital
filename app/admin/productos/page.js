@@ -8,6 +8,7 @@ import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { crearProducto } from "../actions";
 import Interruptor from "@/components/Interruptor";
+import SwitchVenta from "@/components/SwitchVenta";
 import BorrarProducto from "@/components/BorrarProducto";
 
 export const dynamic = "force-dynamic";
@@ -119,6 +120,7 @@ export default async function Productos({ searchParams }) {
             </label>
             <textarea name="descripcion" rows={2} placeholder="Descripción corta" className={campo} />
             {ERRORES[sp?.error] && <p className="text-sm text-red-600">{ERRORES[sp.error]}</p>}
+            <SwitchVenta />
             <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar producto</button>
           </form>
         </details>

@@ -118,6 +118,7 @@ export async function crearProducto(formData) {
       returning id`;
   }
   if (p.duracion && r[0]?.id) await sql`update productos set duracion_dias = ${p.duracion} where id = ${r[0].id}`;
+  if (String(formData.get("activo")) === "0" && r[0]?.id) await sql`update productos set activo = false where id = ${r[0].id}`;
   if (p.tipo === "cuenta" && r[0]?.id) {
     for (const x of planesNuevos) {
       const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"}`;
