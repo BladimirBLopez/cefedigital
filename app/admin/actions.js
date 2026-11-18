@@ -63,6 +63,41 @@ export async function crearProducto(formData) {
   const p = leerProducto(formData);
   if (p.error) redirect(`/admin/productos?error=${p.error}`);
 
+  const planesNuevos = [];
+  let precioProducto = p.precio;
+  if (p.tipo === "cuenta") {
+    const okInt = (n, a, b) => Number.isInteger(n) && n >= a && n <= b;
+    const dinero = (v) => {
+      const t = String(v ?? "").trim().replace(",", ".");
+      if (t === "") return null;
+      const n = Number(t);
+      return Number.isFinite(n) && n >= 0 ? n : NaN;
+    };
+    const pants = formData.getAll("pantallas").map(Number);
+    const mesesSel = [...new Set(formData.getAll("meses").map(Number).filter((m) => okInt(m, 1, 36)))].sort((a, b) => a - b);
+    if (new Set(pants).size !== pants.length) redirect("/admin/productos?error=repetidas");
+    for (let i = 0; i < pants.length; i++) {
+      const pant = pants[i];
+      if (!okInt(pant, 1, 10)) continue;
+      const perfil = pant === 1 ? "1 pantalla" : `${pant} pantallas`;
+      for (const m of mesesSel) {
+        const pr = dinero(formData.get(`precio_${i}_${m}`));
+        const co = dinero(formData.get(`costo_${i}_${m}`));
+        if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos?error=precio");
+        if (pr === null) continue;
+        planesNuevos.push({
+          perfil,
+          pant,
+          m,
+          precio: Math.round(pr * 100) / 100,
+          costo: co === null ? null : Math.round(co * 100) / 100,
+        });
+      }
+    }
+    if (planesNuevos.length === 0) redirect("/admin/productos?error=planes");
+    precioProducto = Math.min(...planesNuevos.map((x) => x.precio));
+  }
+
   let imagen = null;
   try {
     imagen = await subirFoto(formData.get("foto"));
@@ -73,53 +108,29 @@ export async function crearProducto(formData) {
   const base = hacerSlug(p.nombre) || "producto";
   let r = await sql`
     insert into productos (nombre, slug, descripcion, categoria, precio, tipo, campo_cliente, vence, imagen_url)
-    values (${p.nombre}, ${base}, ${p.descripcion}, ${p.categoria}, ${p.precio}, ${p.tipo}, ${p.campoCliente}, ${p.vence}, ${imagen})
+    values (${p.nombre}, ${base}, ${p.descripcion}, ${p.categoria}, ${precioProducto}, ${p.tipo}, ${p.campoCliente}, ${p.vence}, ${imagen})
     on conflict (slug) do nothing returning id`;
   if (r.length === 0) {
     const slug2 = `${base}-${Math.random().toString(36).slice(2, 6)}`;
     r = await sql`
       insert into productos (nombre, slug, descripcion, categoria, precio, tipo, campo_cliente, vence, imagen_url)
-      values (${p.nombre}, ${slug2}, ${p.descripcion}, ${p.categoria}, ${p.precio}, ${p.tipo}, ${p.campoCliente}, ${p.vence}, ${imagen})
+      values (${p.nombre}, ${slug2}, ${p.descripcion}, ${p.categoria}, ${precioProducto}, ${p.tipo}, ${p.campoCliente}, ${p.vence}, ${imagen})
       returning id`;
   }
   if (p.duracion && r[0]?.id) await sql`update productos set duracion_dias = ${p.duracion} where id = ${r[0].id}`;
   if (p.tipo === "cuenta" && r[0]?.id) {
-    const okInt = (n, a, b) => Number.isInteger(n) && n >= a && n <= b;
-    const dinero = (v) => {
-      const t = String(v ?? "").trim().replace(",", ".");
-      if (t === "") return null;
-      const n = Number(t);
-      return Number.isFinite(n) && n >= 0 ? n : NaN;
-    };
-    const pants = formData.getAll("pantallas").map(Number);
-    const preciosMes = formData.getAll("precio_mes");
-    const costosMes = formData.getAll("costo_mes");
-    let mesesSel = [...new Set(formData.getAll("meses").map(Number).filter((m) => okInt(m, 1, 36)))].sort((a, b) => a - b);
-    if (mesesSel.length === 0) mesesSel = [1];
-    const vistas = new Set();
-    for (let i = 0; i < pants.length; i++) {
-      const pant = pants[i];
-      const pm = dinero(preciosMes[i]);
-      const cm = dinero(costosMes[i]);
-      if (!okInt(pant, 1, 10) || vistas.has(pant)) continue;
-      if (pm === null || Number.isNaN(pm) || Number.isNaN(cm)) continue;
-      vistas.add(pant);
-      const perfil = pant === 1 ? "1 pantalla" : `${pant} pantallas`;
-      for (const m of mesesSel) {
-        const nombrePlan = `${perfil} · ${m} ${m === 1 ? "mes" : "meses"}`;
-        const precioPlan = Math.round(pm * m * 100) / 100;
-        const costoPlan = cm === null ? null : Math.round(cm * m * 100) / 100;
-        await sql`
-          insert into planes (producto_id, perfil, pantallas, meses_pagados, meses_gratis, duracion_dias, nombre, costo, precio, activo, orden)
-          values (${r[0].id}, ${perfil}, ${pant}, ${m}, ${0}, ${m * 30}, ${nombrePlan}, ${costoPlan}, ${precioPlan}, true, ${pant * 100 + m})`;
-      }
+    for (const x of planesNuevos) {
+      const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"}`;
+      await sql`
+        insert into planes (producto_id, perfil, pantallas, meses_pagados, meses_gratis, duracion_dias, nombre, costo, precio, activo, orden)
+        values (${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0}, ${x.m * 30}, ${nombrePlan}, ${x.costo}, ${x.precio}, true, ${x.pant * 100 + x.m})`;
     }
   }
   await anotar(
     "crear",
     "producto",
     r[0]?.id,
-    `Creó "${p.nombre}" a Bs ${p.precio.toFixed(2)}${p.vence ? ` · vence ${p.vence}` : ""}`
+    `Creó "${p.nombre}" a Bs ${precioProducto.toFixed(2)}${p.vence ? ` · vence ${p.vence}` : ""}`
   );
   revalidatePath("/");
   revalidatePath("/admin/productos");
