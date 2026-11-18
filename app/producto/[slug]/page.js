@@ -6,6 +6,7 @@ import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 import { crearPedido } from "@/app/tienda-actions";
+import SelectorPlanes from "@/components/SelectorPlanes";
 
 export const dynamic = "force-dynamic";
 
@@ -58,28 +59,7 @@ export default async function Producto({ params, searchParams }) {
             <p className="text-xs text-neutral-500">Llena tus datos y te escribimos por WhatsApp cuando confirmemos tu pago.</p>
             <input type="hidden" name="producto_id" value={p.id} />
             <input type="hidden" name="slug" value={p.slug} />
-            {hayPlanes && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-marino">Elige tu plan</h3>
-                {grupos.map((g) => (
-                  <div key={g.perfil}>
-                    <p className="text-xs font-medium text-neutral-500 mb-1.5">{g.perfil}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {g.items.map((pl, i) => (
-                        <label key={pl.id} className="block cursor-pointer">
-                          <input type="radio" name="plan_id" value={pl.id} required defaultChecked={grupos[0] === g && i === 0} className="peer sr-only" />
-                          <div className="rounded-xl border border-neutral-300 px-3 py-2 text-center peer-checked:border-intenso peer-checked:bg-intenso/10 peer-checked:ring-1 peer-checked:ring-intenso">
-                            <p className="text-sm font-semibold text-marino">{pl.meses_pagados} {pl.meses_pagados === 1 ? "mes" : "meses"}</p>
-                            {pl.meses_gratis > 0 && <p className="inline-block rounded-full bg-turquesa/25 text-marino text-[11px] font-medium px-2">+ {pl.meses_gratis} {pl.meses_gratis === 1 ? "mes gratis" : "meses gratis"}</p>}
-                            <p className="text-sm font-bold text-intenso mt-0.5">Bs {pl.precio.toFixed(2)}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {hayPlanes && <SelectorPlanes grupos={grupos} />}
             <input name="nombre" required maxLength={80} placeholder="Tu nombre" className={campo} />
             <input name="whatsapp" required inputMode="tel" placeholder="Tu WhatsApp (ej: 71234567)" className={campo} />
             {esRecarga && p.campo_cliente && (
