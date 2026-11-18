@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { asegurarEsquema } from "@/lib/esquema";
 import AdminNav from "@/components/AdminNav";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ function Dato({ titulo, valor }) {
 
 export default async function Resumen() {
   await requireAdmin();
+  await asegurarEsquema();
   const [r] = await sql`
     with v as (
       select id, total,

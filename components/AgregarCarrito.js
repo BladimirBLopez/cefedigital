@@ -39,7 +39,7 @@ export default function AgregarCarrito({ producto, planes }) {
         nombre: producto.nombre,
         imagen: producto.imagen || null,
         plan_id: planId,
-        plan_texto: plan ? `${plan.perfil} · ${plan.pantallas} ${plan.pantallas === 1 ? "pantalla" : "pantallas"} · ${mes(plan.meses_pagados + plan.meses_gratis)}` : null,
+        plan_texto: plan ? `${plan.perfil} · ${plan.pantallas} ${plan.pantallas === 1 ? "pantalla" : "pantallas"} · ${mes(plan.meses_pagados)}` : null,
         precio: plan ? plan.precio : producto.precio,
         cantidad,
         dato_cliente: dato,

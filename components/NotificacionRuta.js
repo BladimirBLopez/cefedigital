@@ -10,8 +10,6 @@ const EXITOS = {
   producto_eliminado: "Producto eliminado correctamente.",
   producto_publicado: "Producto publicado correctamente.",
   producto_ocultado: "Producto ocultado correctamente.",
-  stock_agregado: "Stock agregado correctamente.",
-  stock_borrado: "Registro de stock eliminado correctamente.",
   plan_agregado: "Plan agregado correctamente.",
   plan_actualizado: "Cambios del plan guardados correctamente.",
   plan_activado: "Plan activado correctamente.",
@@ -43,14 +41,10 @@ export default function NotificacionRuta() {
 
     const params = new URLSearchParams(consulta);
     const aviso = params.get("aviso");
-    const cantidad = params.get("cantidad");
     const nuevo = params.get("nuevo");
 
     if (aviso && EXITOS[aviso]) {
-      const mensaje =
-        aviso === "stock_agregado" && cantidad
-          ? `Se agregaron ${cantidad} claves al stock.`
-          : EXITOS[aviso];
+      const mensaje = EXITOS[aviso];
 
       toast.success(mensaje);
     } else if (nuevo === "1") {
@@ -63,7 +57,6 @@ export default function NotificacionRuta() {
     ultima.current = clave;
 
     params.delete("aviso");
-    params.delete("cantidad");
     params.delete("nuevo");
 
     const resto = params.toString();

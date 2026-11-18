@@ -121,6 +121,16 @@ export default function CarritoCliente({ error }) {
 
       <form action={crearPedidoCarrito} className="mt-5 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
         <input type="hidden" name="items" value={JSON.stringify(payload)} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="block text-xs text-neutral-500">
+            Tu nombre
+            <input name="cliente_nombre" required maxLength={80} autoComplete="name" placeholder="Nombre completo" className={campo + " mt-1"} />
+          </label>
+          <label className="block text-xs text-neutral-500">
+            Tu WhatsApp
+            <input name="cliente_whatsapp" type="tel" required minLength={8} maxLength={15} inputMode="tel" autoComplete="tel" placeholder="Ej. 71234567" className={campo + " mt-1"} />
+          </label>
+        </div>
         <p className="text-xs text-neutral-500">Al hacer el pedido te damos un código y las instrucciones de pago. El total final se confirma al crear el pedido.</p>
         {error && <p className="text-sm text-red-600">{ERRORES[error] || ERRORES.fallo}</p>}
         <button type="button" onClick={() => { if (window.confirm("¿Vaciar el carrito?")) cambiar([]); }} className="w-full text-xs text-neutral-500">Vaciar carrito</button>

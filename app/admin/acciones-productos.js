@@ -23,8 +23,7 @@ export async function borrarProducto(formData) {
   let borrado = [];
   try {
     borrado = await sql`
-      with s as (delete from stock where producto_id = ${id}),
-           pl as (delete from planes where producto_id = ${id})
+      with pl as (delete from planes where producto_id = ${id})
       delete from productos where id = ${id} returning nombre`;
   } catch (e) {
     console.error("borrar producto fallo", e);

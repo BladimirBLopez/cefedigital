@@ -17,8 +17,7 @@ export default async function Home({ searchParams }) {
   const prods = await sql`
     select p.slug, p.nombre, p.categoria, p.imagen_url,
       coalesce((select min(pl.precio) from planes pl where pl.producto_id = p.id and pl.activo), p.precio)::float as precio,
-      exists (select 1 from planes pl where pl.producto_id = p.id and pl.activo) as con_planes,
-      99 as disponibles
+      exists (select 1 from planes pl where pl.producto_id = p.id and pl.activo) as con_planes
     from productos p
     where p.activo and (${cat}::text is null or p.categoria = ${cat})
       and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')

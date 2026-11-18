@@ -32,21 +32,18 @@ export default async function Productos({ searchParams }) {
   await asegurarEsquema();
   const sp = await searchParams;
   const q = String(sp?.q || "").trim().toLowerCase();
-  const estado = ["venta", "oculto", "agotado", "vencen"].includes(sp?.estado) ? sp.estado : "todos";
+  const estado = ["venta", "oculto", "vencen"].includes(sp?.estado) ? sp.estado : "todos";
   const cats = String(sp?.cat || "").split("|").map((c) => c.trim()).filter(Boolean);
 
   const todos = await sql`
     select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.vence::text as vence,
-      p.precio::float as precio, p.activo,
-      (select count(*)::int from stock s where s.producto_id = p.id and s.estado = 'disponible') as disponibles
+      p.precio::float as precio, p.activo
     from productos p order by p.id desc`;
 
-  const agotado = (p) => p.activo && p.tipo !== "recarga" && p.disponibles === 0;
   const vencen = (p) => ["vencido", "pronto"].includes(estadoVence(p.vence).clave);
   const stats = {
     total: todos.length,
     venta: todos.filter((p) => p.activo).length,
-    agotado: todos.filter(agotado).length,
     vencen: todos.filter(vencen).length,
     oculto: todos.filter((p) => !p.activo).length,
   };
@@ -56,7 +53,6 @@ export default async function Productos({ searchParams }) {
     if (cats.length && !cats.includes(p.categoria || "Sin categoría")) return false;
     if (estado === "venta") return p.activo;
     if (estado === "oculto") return !p.activo;
-    if (estado === "agotado") return agotado(p);
     if (estado === "vencen") return vencen(p);
     return true;
   });

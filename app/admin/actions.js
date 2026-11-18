@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin, cerrarSesion } from "@/lib/auth";
-import { cifrar } from "@/lib/cripto";
 import { anotar } from "@/lib/registro";
 import { asegurarEsquema } from "@/lib/esquema";
 import { subirFoto } from "@/lib/cloudinary";
@@ -184,59 +183,6 @@ export async function cambiarActivo(formData) {
   revalidatePath("/admin/productos");
 
   return { ok: true, activo: r[0].activo };
-}
-
-export async function agregarStock(formData) {
-  await requireAdmin();
-  const id = Number(formData.get("producto_id"));
-  const lineas = String(formData.get("datos") || "")
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .slice(0, 500);
-  if (!Number.isInteger(id)) redirect("/admin/stock?error=producto");
-  if (lineas.length === 0) redirect("/admin/stock?error=vacio");
-  await sql`
-    insert into stock (producto_id, dato)
-    select ${id}, unnest(${lineas.map((l) => cifrar(l))}::text[])`;
-  const pr = await sql`select nombre from productos where id = ${id}`;
-  await anotar("stock_agregar", "stock", id, `Agregó ${lineas.length} al stock de "${pr[0]?.nombre ?? id}"`);
-  revalidatePath("/admin/stock");
-  revalidatePath("/admin/productos");
-  redirect(`/admin/stock?aviso=stock_agregado&cantidad=${lineas.length}`);
-}
-
-export async function borrarStock(formData) {
-  await requireAdmin();
-  const id = Number(formData.get("id"));
-
-  if (!Number.isInteger(id)) {
-    redirect("/admin/stock?error=producto");
-  }
-
-  const r = await sql`
-    delete from stock
-    where id = ${id} and estado = 'disponible'
-    returning producto_id`;
-
-  if (!r[0]) {
-    redirect("/admin/stock?error=stock_borrado");
-  }
-
-  const pr = await sql`
-    select nombre from productos where id = ${r[0].producto_id}`;
-
-  await anotar(
-    "stock_borrar",
-    "stock",
-    r[0].producto_id,
-    `Borró 1 del stock de "${pr[0]?.nombre ?? r[0].producto_id}"`
-  );
-
-  revalidatePath("/admin/stock");
-  revalidatePath("/admin/productos");
-
-  redirect("/admin/stock?aviso=stock_borrado");
 }
 
 export async function editarProducto(formData) {

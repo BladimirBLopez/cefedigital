@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { limpiarWhatsapp } from "@/lib/ajustes";
 import AdminNav from "@/components/AdminNav";
 import BotonConfirmar from "@/components/BotonConfirmar";
-import { confirmarPago, cancelarPedido } from "../acciones-pedidos";
+import { confirmarPago, marcarEntregado, cancelarPedido } from "../acciones-pedidos";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,8 @@ const ESTADOS = [
 ];
 
 const ERRORES = {
-  sin_stock: "No alcanza el stock de claves",
+  pago: "No se pudo confirmar el pago. Comprueba el estado del pedido.",
+  entrega: "No se pudo marcar como entregado. Comprueba que el pedido esté pagado.",
   ya_entregado: "Ese pedido ya estaba entregado",
   cancelado: "Ese pedido está cancelado",
   no_existe: "El pedido no existe",
@@ -120,8 +121,8 @@ export default async function Pedidos({ searchParams }) {
                     <>
                       <form action={confirmarPago}>
                         <input type="hidden" name="id" value={p.id} />
-                        <BotonConfirmar mensaje={`¿Confirmar el pago y entregar el pedido ${p.codigo}?`} className={boton}>
-                          Ya pagó: entregar
+                        <BotonConfirmar mensaje={`¿Confirmar que recibiste el pago del pedido ${p.codigo}?`} className={boton}>
+                          Confirmar pago
                         </BotonConfirmar>
                       </form>
                       <form action={cancelarPedido}>
@@ -133,9 +134,9 @@ export default async function Pedidos({ searchParams }) {
                     </>
                   )}
                   {p.estado === "pagado" && (
-                    <form action={confirmarPago}>
+                    <form action={marcarEntregado}>
                       <input type="hidden" name="id" value={p.id} />
-                      <BotonConfirmar mensaje={`¿Marcar como entregado el pedido ${p.codigo}?`} className={boton}>
+                      <BotonConfirmar mensaje={`¿Confirmas que entregaste manualmente por WhatsApp el pedido ${p.codigo}?`} className={boton}>
                         Marcar entregado
                       </BotonConfirmar>
                     </form>

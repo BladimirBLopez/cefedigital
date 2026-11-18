@@ -27,14 +27,14 @@ const ESTILO = {
 export default async function Registro({ searchParams }) {
   await requireAdmin();
   const sp = await searchParams;
-  const f = ["producto", "stock"].includes(sp?.f) ? sp.f : "todo";
+  const f = sp?.f === "producto" ? "producto" : "todo";
   await asegurarRegistro();
   const filas =
     f === "todo"
       ? await sql`select id, creado, accion, detalle from registro_admin order by id desc limit 100`
       : await sql`select id, creado, accion, detalle from registro_admin where entidad = ${f} order by id desc limit 100`;
 
-  const chips = [["todo", "Todo"], ["producto", "Productos"], ["stock", "Stock"]];
+  const chips = [["todo", "Todo"], ["producto", "Productos"]];
 
   return (
     <>
