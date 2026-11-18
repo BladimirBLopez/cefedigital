@@ -5,6 +5,7 @@ import { sql } from "@/lib/db";
 import { asegurarEsquema } from "@/lib/esquema";
 import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
+import { MODALIDADES, textoModalidad, modalidadVieja } from "@/lib/modalidades";
 import FormPlan from "@/components/FormPlan";
 import { agregarPlan, editarPrecioPlan, editarModalidadPlan, cambiarActivoPlan, borrarPlan } from "@/app/admin/acciones-planes";
 
@@ -41,7 +42,7 @@ export default async function Planes({ params, searchParams }) {
 
   const planes = await sql`
     select id, perfil, pantallas, meses_pagados, duracion_dias,
-           costo::float as costo, precio::float as precio, compartida, activo
+           costo::float as costo, precio::float as precio, compartida, modalidad, activo
     from planes where producto_id = ${id}
     order by orden, id`;
 
@@ -78,11 +79,7 @@ export default async function Planes({ params, searchParams }) {
 
           {planes.map((p) => {
             const gan = p.costo == null ? null : p.precio - p.costo;
-            const modalidad = p.compartida === null
-              ? "Sin clasificar"
-              : p.compartida
-                ? "Perfil compartido"
-                : "Cuenta completa";
+            const modalidad = textoModalidad(p.modalidad || modalidadVieja(p.compartida)) || "Sin modalidad";
 
             return (
               <li key={p.id} className={"rounded-2xl bg-white border border-neutral-200 p-4 " + (p.activo ? "" : "opacity-60")}>
@@ -124,19 +121,13 @@ export default async function Planes({ params, searchParams }) {
                   <label className="flex-1 min-w-[180px] text-[11px] text-neutral-500">
                     Cambiar modalidad
                     <select
-                      name="compartida"
-                      defaultValue={
-                        p.compartida === true
-                          ? "true"
-                          : p.compartida === false
-                            ? "false"
-                            : "null"
-                      }
+                      name="modalidad"
+                      defaultValue={p.modalidad || modalidadVieja(p.compartida)}
                       className="mt-0.5 w-full rounded-lg bg-neutral-100 border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-intenso"
                     >
-                      <option value="false">Cuenta completa</option>
-                      <option value="true">Perfil compartido</option>
-                      <option value="null">Sin clasificar</option>
+                      {MODALIDADES.map(([v, tx]) => (
+                        <option key={v || "ninguna"} value={v}>{tx}</option>
+                      ))}
                     </select>
                   </label>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MODALIDADES } from "@/lib/modalidades";
 
 const PANT = [1, 2, 3, 4, 5, 6, 7, 8];
 const MESES = [1, 2, 3, 6, 12];
@@ -14,7 +15,7 @@ const num = (v) => {
 const cols = "grid grid-cols-[4.5rem_1fr_1fr_1.5rem] gap-2 items-center";
 
 export default function TarifasCuenta() {
-  const [filas, setFilas] = useState([{ id: 1, pant: 1, meses: 1, precio: "", costo: "", compartida: false }]);
+  const [filas, setFilas] = useState([{ id: 1, pant: 1, meses: 1, precio: "", costo: "", modalidad: "completa" }]);
   const [verCostos, setVerCostos] = useState(false);
 
   const cambiar = (id, k, v) => setFilas((fs) => fs.map((f) => (f.id === id ? { ...f, [k]: v } : f)));
@@ -26,15 +27,15 @@ export default function TarifasCuenta() {
       const nueva = sig
         ? { pant: u.pant, meses: sig }
         : { pant: Math.min(u.pant + 1, PANT[PANT.length - 1]), meses: 1 };
-      return [...fs, { id: Date.now(), ...nueva, precio: "", costo: "", compartida: false }];
+      return [...fs, { id: Date.now(), ...nueva, precio: "", costo: "", modalidad: "completa" }];
     });
 
   const cuenta = {};
   filas.forEach((f) => {
-    const c = `${f.pant}-${f.meses}-${f.compartida ? "1" : "0"}`;
+    const c = `${f.pant}-${f.meses}-${f.modalidad}`;
     cuenta[c] = (cuenta[c] || 0) + 1;
   });
-  const repetida = (f) => cuenta[`${f.pant}-${f.meses}-${f.compartida ? "1" : "0"}`] > 1;
+  const repetida = (f) => cuenta[`${f.pant}-${f.meses}-${f.modalidad}`] > 1;
   const precios = filas.map((f) => num(f.precio)).filter((n) => n !== null);
   const minimo = precios.length ? Math.min(...precios) : 0;
 
@@ -104,26 +105,17 @@ export default function TarifasCuenta() {
             )}
           </div>
 
-          <input
-            type="hidden"
-            name="plan_compartida"
-            value={f.compartida ? "true" : "false"}
-          />
-
-          <div className="flex items-center justify-between gap-2 pl-1">
-            <label className="inline-flex items-center gap-2 text-xs text-neutral-600">
-              <input
-                type="checkbox"
-                checked={f.compartida}
-                onChange={(e) => cambiar(f.id, "compartida", e.target.checked)}
-                className="h-4 w-4 rounded border-neutral-300 text-intenso focus:ring-intenso"
-              />
-              Cuenta compartida
-            </label>
-            <span className="text-[11px] text-neutral-400">
-              {f.compartida ? "Perfil compartido" : "Cuenta completa"}
-            </span>
-          </div>
+          <select
+            name="plan_modalidad"
+            value={f.modalidad}
+            onChange={(e) => cambiar(f.id, "modalidad", e.target.value)}
+            aria-label="Modalidad de la cuenta"
+            className={campo}
+          >
+            {MODALIDADES.map(([v, tx]) => (
+              <option key={v || "ninguna"} value={v}>{tx}</option>
+            ))}
+          </select>
 
           <input
             name="plan_costo"

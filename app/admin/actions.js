@@ -1,5 +1,7 @@
 "use server";
 
+import { normalizarModalidad, textoModalidad, compartidaDe } from "@/lib/modalidades";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
@@ -86,7 +88,7 @@ export async function crearProducto(formData) {
     const mesesF = formData.getAll("plan_meses").map(Number);
     const preciosF = formData.getAll("plan_precio");
     const costosF = formData.getAll("plan_costo");
-    const compartidasF = formData.getAll("plan_compartida");
+    const modalidadesF = formData.getAll("plan_modalidad");
     const vistos = new Set();
     for (let i = 0; i < pants.length; i++) {
       const pant = pants[i];
@@ -94,11 +96,12 @@ export async function crearProducto(formData) {
       if (!okInt(pant, 1, 10) || !okInt(m, 1, 36)) continue;
       const pr = dinero(preciosF[i]);
       const co = dinero(costosF[i]);
-      const compartida = String(compartidasF[i] ?? "false") === "true";
+      const modalidad = normalizarModalidad(modalidadesF[i]);
+      const compartida = compartidaDe(modalidad);
       if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos/nuevo?error=precio");
       if (pr === null) continue;
 
-      const clavePlan = `${pant}-${m}-${compartida ? "1" : "0"}`;
+      const clavePlan = `${pant}-${m}-${modalidad || "x"}`;
       if (vistos.has(clavePlan)) redirect("/admin/productos/nuevo?error=repetidas");
       vistos.add(clavePlan);
 
@@ -106,6 +109,7 @@ export async function crearProducto(formData) {
         perfil: pant === 1 ? "1 pantalla" : `${pant} pantallas`,
         pant,
         m,
+        modalidad,
         compartida,
         precio: Math.round(pr * 100) / 100,
         costo: co === null ? 0 : Math.round(co * 100) / 100,
@@ -141,17 +145,17 @@ export async function crearProducto(formData) {
     let falloPlanes = false;
     try {
       for (const x of planesNuevos) {
-        const modalidad = x.compartida ? "Perfil compartido" : "Cuenta completa";
-        const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"} · ${modalidad}`;
+        const etiquetaMod = textoModalidad(x.modalidad);
+        const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"}${etiquetaMod ? ` · ${etiquetaMod}` : ""}`;
         await sql`
           insert into planes (
             producto_id, perfil, pantallas, meses_pagados, meses_gratis,
-            duracion_dias, nombre, costo, precio, compartida, activo, orden
+            duracion_dias, nombre, costo, precio, compartida, modalidad, activo, orden
           )
           values (
             ${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0},
             ${x.m * 30}, ${nombrePlan}, ${x.costo}, ${x.precio},
-            ${x.compartida}, true, ${x.pant * 100 + x.m}
+            ${x.compartida}, ${x.modalidad || null}, true, ${x.pant * 100 + x.m}
           )`;
       }
     } catch (e) {

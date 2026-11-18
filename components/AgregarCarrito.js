@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { leerCarrito, guardarCarrito } from "./carritoLocal";
+import { textoModalidad, modalidadVieja } from "@/lib/modalidades";
 
 const MAX_ITEMS = 10;
 const mes = (n) => `${n} ${n === 1 ? "mes" : "meses"}`;
@@ -40,7 +41,7 @@ export default function AgregarCarrito({ producto, planes }) {
         imagen: producto.imagen || null,
         plan_id: planId,
         plan_texto: plan
-          ? `${plan.perfil} · ${plan.pantallas} ${plan.pantallas === 1 ? "pantalla" : "pantallas"} · ${mes(plan.meses_pagados)} · ${plan.compartida === true ? "Perfil compartido" : plan.compartida === false ? "Cuenta completa" : "Modalidad sin clasificar"}`
+          ? `${plan.perfil} · ${plan.pantallas} ${plan.pantallas === 1 ? "pantalla" : "pantallas"} · ${mes(plan.meses_pagados)}${textoModalidad(plan.modalidad || modalidadVieja(plan.compartida)) ? " · " + textoModalidad(plan.modalidad || modalidadVieja(plan.compartida)) : ""}`
           : null,
         precio: plan ? plan.precio : producto.precio,
         cantidad,

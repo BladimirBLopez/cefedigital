@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { asegurarEsquema } from "@/lib/esquema";
+import { modalidadDeForm, normalizarModalidad, textoModalidad, compartidaDe } from "@/lib/modalidades";
 
 const ruta = (id) => `/admin/productos/${id}/planes`;
 
@@ -39,7 +40,8 @@ export async function agregarPlan(formData) {
   const pagados = entero(formData.get("meses_pagados"), 1, 36);
   const precio = dinero(formData.get("precio"));
   const costo = dinero(formData.get("costo"));
-  const compartida = String(formData.get("compartida") || "false") === "true";
+  const modal = modalidadDeForm(formData);
+  const compartida = compartidaDe(modal);
 
   if (!pantallas || !pagados) redirect(`${ruta(pid)}?error=datos`);
   if (precio === null || Number.isNaN(precio)) redirect(`${ruta(pid)}?error=precio`);
@@ -50,25 +52,25 @@ export async function agregarPlan(formData) {
     where producto_id = ${pid}
       and pantallas = ${pantallas}
       and meses_pagados = ${pagados}
-      and compartida = ${compartida}
+      and modalidad is not distinct from ${modal || null}::text
     limit 1`;
 
   if (dup.length > 0) redirect(`${ruta(pid)}?error=repetido`);
 
   const perfil = pantallas === 1 ? "1 pantalla" : `${pantallas} pantallas`;
-  const modalidad = compartida ? "Perfil compartido" : "Cuenta completa";
-  const nombre = `${perfil} · ${pagados} ${pagados === 1 ? "mes" : "meses"} · ${modalidad}`;
+  const etiqueta = textoModalidad(modal);
+  const nombre = `${perfil} · ${pagados} ${pagados === 1 ? "mes" : "meses"}${etiqueta ? ` · ${etiqueta}` : ""}`;
   const duracion = pagados * 30;
   const orden = pantallas * 100 + pagados;
 
   await sql`
     insert into planes (
       producto_id, perfil, pantallas, meses_pagados, meses_gratis,
-      duracion_dias, nombre, costo, precio, compartida, activo, orden
+      duracion_dias, nombre, costo, precio, compartida, modalidad, activo, orden
     )
     values (
       ${pid}, ${perfil}, ${pantallas}, ${pagados}, 0,
-      ${duracion}, ${nombre}, ${costo}, ${precio}, ${compartida}, true, ${orden}
+      ${duracion}, ${nombre}, ${costo}, ${precio}, ${compartida}, ${modal || null}, true, ${orden}
     )`;
 
   await sincronizarPrecio(pid);
@@ -112,19 +114,8 @@ export async function editarModalidadPlan(formData) {
     redirect("/admin/productos");
   }
 
-  const valor = String(formData.get("compartida") ?? "");
-
-  let compartida;
-
-  if (valor === "true") {
-    compartida = true;
-  } else if (valor === "false") {
-    compartida = false;
-  } else if (valor === "null") {
-    compartida = null;
-  } else {
-    redirect(`${ruta(pid)}?error=modalidad`);
-  }
+  const modal = normalizarModalidad(formData.get("modalidad"));
+  const compartida = compartidaDe(modal);
 
   const [plan] = await sql`
     select pl.id, pl.perfil, pl.pantallas, pl.meses_pagados,
@@ -145,7 +136,7 @@ export async function editarModalidadPlan(formData) {
     where producto_id = ${pid}
       and pantallas = ${plan.pantallas}
       and meses_pagados = ${plan.meses_pagados}
-      and compartida is not distinct from ${compartida}
+      and modalidad is not distinct from ${modal || null}::text
       and id <> ${id}
     limit 1
   `;
@@ -158,15 +149,13 @@ export async function editarModalidadPlan(formData) {
     plan.meses_pagados === 1 ? "mes" : "meses"
   }`;
 
-  const nombre = compartida === null
-    ? base
-    : `${base} · ${
-        compartida ? "Perfil compartido" : "Cuenta completa"
-      }`;
+  const etiqueta = textoModalidad(modal);
+  const nombre = etiqueta ? `${base} · ${etiqueta}` : base;
 
   await sql`
     update planes
     set compartida = ${compartida},
+        modalidad = ${modal || null},
         nombre = ${nombre}
     where id = ${id}
       and producto_id = ${pid}
