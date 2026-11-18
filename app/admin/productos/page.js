@@ -113,7 +113,10 @@ export default async function Productos({ searchParams }) {
           <form action={crearProducto} className="p-4 pt-0 space-y-3">
             <SubirFoto />
             <input name="nombre" required placeholder="Nombre (ej: Windows 11 Pro)" className={campo} />
-            <input name="categoria" placeholder="Categoría (ej: Streaming)" className={campo} />
+            <input name="categoria" list="lista-categorias" placeholder="Categoría (ej: Streaming)" className={campo} />
+            <datalist id="lista-categorias">
+              {categorias.filter((c) => c !== "Sin categoría").map((c) => <option key={c} value={c} />)}
+            </datalist>
             <CamposProducto conPlan />
             <label className="block text-xs text-neutral-500">
               Vence (proveedor, opcional)

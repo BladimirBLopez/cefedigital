@@ -28,6 +28,13 @@ function esFecha(t) {
   }
 }
 
+async function unificarCategoria(cat, id = 0) {
+  if (!cat) return null;
+  const limpia = cat.replace(/\s+/g, " ").trim();
+  const r = await sql`select categoria from productos where lower(categoria) = lower(${limpia}) and id <> ${id} limit 1`;
+  return r[0]?.categoria || limpia;
+}
+
 function leerProducto(formData) {
   const nombre = String(formData.get("nombre") || "").trim();
   const categoria = String(formData.get("categoria") || "").trim() || null;
@@ -62,6 +69,7 @@ export async function crearProducto(formData) {
   await asegurarEsquema();
   const p = leerProducto(formData);
   if (p.error) redirect(`/admin/productos?error=${p.error}`);
+  p.categoria = await unificarCategoria(p.categoria);
 
   const planesNuevos = [];
   let precioProducto = p.precio;
@@ -213,6 +221,7 @@ export async function editarProducto(formData) {
   const base = `/admin/productos/${id}`;
   const p = leerProducto(formData);
   if (p.error) redirect(`${base}?error=${p.error}`);
+  p.categoria = await unificarCategoria(p.categoria, id);
 
   const actual = String(formData.get("imagen_url") || "").trim();
   if (actual && !/^https:\/\//i.test(actual)) redirect(`${base}?error=imagen`);

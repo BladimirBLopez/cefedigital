@@ -16,7 +16,7 @@ const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 p
 const tarjeta = "rounded-2xl bg-white border border-neutral-200 p-4 space-y-3";
 const rotulo = "block text-xs font-medium text-neutral-500";
 
-const TIPOS = { clave: "Clave o licencia", cuenta: "Cuenta de streaming", recarga: "Recarga de juego" };
+const TIPOS = { clave: "Clave o licencia", cuenta: "Cuenta con planes", recarga: "Recarga con ID" };
 
 const ERRORES = {
   nombre: "Falta el nombre",
@@ -45,6 +45,8 @@ export default async function EditarProducto({ params, searchParams }) {
     p.tipo === "cuenta"
       ? await sql`select id, nombre, precio::float as precio, costo::float as costo, activo from planes where producto_id = ${id} order by orden, id`
       : [];
+
+  const cats = await sql`select distinct categoria from productos where categoria is not null order by 1`;
 
   return (
     <>
@@ -82,12 +84,15 @@ export default async function EditarProducto({ params, searchParams }) {
             </label>
             <label className={rotulo}>
               Categoría
-              <input name="categoria" defaultValue={p.categoria || ""} placeholder="Ej: Streaming" className={campo + " mt-1"} />
+              <input name="categoria" list="lista-categorias" defaultValue={p.categoria || ""} placeholder="Ej: Streaming" className={campo + " mt-1"} />
+              <datalist id="lista-categorias">
+                {cats.map((c) => <option key={c.categoria} value={c.categoria} />)}
+              </datalist>
             </label>
           </section>
 
           <section className={tarjeta}>
-            <CamposProducto tipo={p.tipo} campoCliente={p.campo_cliente} duracion={p.duracion_dias} />
+            <CamposProducto tipo={p.tipo} campoCliente={p.campo_cliente} duracion={p.duracion_dias} sinDuracion={planes.length > 0} />
             <div className="grid grid-cols-2 gap-3">
               <label className={rotulo}>
                 {planes.length > 0 ? "Precio desde (Bs)" : "Precio (Bs)"}
