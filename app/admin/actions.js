@@ -28,6 +28,8 @@ function esFecha(t) {
   }
 }
 
+const CATEGORIAS = { clave: "Licencias", cuenta: "Streaming / IPTV", recarga: "Recargas de juegos" };
+
 async function unificarCategoria(cat, id = 0) {
   if (!cat) return null;
   const limpia = cat.replace(/\s+/g, " ").trim();
@@ -69,7 +71,7 @@ export async function crearProducto(formData) {
   await asegurarEsquema();
   const p = leerProducto(formData);
   if (p.error) redirect(`/admin/productos?error=${p.error}`);
-  p.categoria = await unificarCategoria(p.categoria);
+  p.categoria = CATEGORIAS[p.tipo];
 
   const planesNuevos = [];
   let precioProducto = p.precio;
@@ -221,7 +223,7 @@ export async function editarProducto(formData) {
   const base = `/admin/productos/${id}`;
   const p = leerProducto(formData);
   if (p.error) redirect(`${base}?error=${p.error}`);
-  p.categoria = await unificarCategoria(p.categoria, id);
+  p.categoria = CATEGORIAS[p.tipo];
 
   const actual = String(formData.get("imagen_url") || "").trim();
   if (actual && !/^https:\/\//i.test(actual)) redirect(`${base}?error=imagen`);

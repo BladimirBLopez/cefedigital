@@ -11,11 +11,11 @@ export default function CamposProducto({ tipo = "clave", campoCliente = "", dura
   return (
     <>
       <label className="block text-xs text-neutral-500">
-        Forma de entrega
+        Tipo de producto
         <select name="tipo" value={t} onChange={(e) => setT(e.target.value)} className={campo + " mt-1"}>
-        <option value="clave">Clave o licencia</option>
-        <option value="cuenta">Cuenta con planes</option>
-        <option value="recarga">Recarga con ID</option>
+        <option value="clave">Licencias (Windows, Office...)</option>
+        <option value="cuenta">Streaming / IPTV (duración y dispositivos)</option>
+        <option value="recarga">Recargas de juegos (ID del cliente)</option>
       </select>
       </label>
       {t === "cuenta" && !conPlan && !sinDuracion && (

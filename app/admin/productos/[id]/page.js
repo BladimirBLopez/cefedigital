@@ -82,13 +82,6 @@ export default async function EditarProducto({ params, searchParams }) {
               Nombre
               <input name="nombre" required defaultValue={p.nombre} className={campo + " mt-1"} />
             </label>
-            <label className={rotulo}>
-              Categoría
-              <input name="categoria" list="lista-categorias" defaultValue={p.categoria || ""} placeholder="Ej: Streaming" className={campo + " mt-1"} />
-              <datalist id="lista-categorias">
-                {cats.map((c) => <option key={c.categoria} value={c.categoria} />)}
-              </datalist>
-            </label>
           </section>
 
           <section className={tarjeta}>
