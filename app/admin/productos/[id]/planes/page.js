@@ -62,12 +62,6 @@ export default async function Planes({ params, searchParams }) {
           </p>
         )}
 
-        {AVISOS[sp?.aviso] && (
-          <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-            {AVISOS[sp.aviso]}
-          </p>
-        )}
-
         <FormPlan action={agregarPlan} productoId={id} />
 
         <ul className="space-y-3">

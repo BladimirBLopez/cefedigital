@@ -46,9 +46,9 @@ export default function NotificacionRuta() {
     if (aviso && EXITOS[aviso]) {
       const mensaje = EXITOS[aviso];
 
-      toast.success(mensaje);
+      toast.success(mensaje, { id: aviso });
     } else if (nuevo === "1") {
-      toast.success(EXITOS.pedido_creado);
+      toast.success(EXITOS.pedido_creado, { id: "pedido_creado" });
     } else {
       ultima.current = "";
       return;

@@ -32,7 +32,8 @@ export default function Interruptor({ id, activo }) {
         toast.success(
           resultado.activo
             ? "Producto publicado correctamente."
-            : "Producto ocultado correctamente."
+            : "Producto ocultado correctamente.",
+          { id: "producto_estado" }
         );
       } catch {
         setOn(anterior);
