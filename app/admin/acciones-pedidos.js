@@ -18,16 +18,31 @@ export async function confirmarPago(formData) {
   }
   revalidatePath("/admin/pedidos");
   revalidatePath("/admin");
-  redirect(r === "ok" ? "/admin/pedidos?ok=1" : `/admin/pedidos?error=${r}`);
+  redirect(r === "ok" ? "/admin/pedidos?aviso=pedido_entregado" : `/admin/pedidos?error=${r}`);
 }
 
 export async function cancelarPedido(formData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
-  if (!Number.isInteger(id)) return;
-  await sql`update pedidos set estado = 'cancelado' where id = ${id} and estado = 'pendiente'`;
+
+  if (!Number.isInteger(id)) {
+    redirect("/admin/pedidos?error=cancelacion");
+  }
+
+  const r = await sql`
+    update pedidos
+    set estado = 'cancelado'
+    where id = ${id} and estado = 'pendiente'
+    returning id`;
+
+  if (!r[0]) {
+    redirect("/admin/pedidos?error=cancelacion");
+  }
+
   revalidatePath("/admin/pedidos");
   revalidatePath("/admin");
+
+  redirect("/admin/pedidos?aviso=pedido_cancelado");
 }
 
 export async function guardarAjustes(formData) {
@@ -44,5 +59,5 @@ export async function guardarAjustes(formData) {
   }
   revalidatePath("/");
   revalidatePath("/admin/ajustes");
-  redirect("/admin/ajustes?ok=1");
+  redirect("/admin/ajustes?aviso=ajustes_guardados");
 }

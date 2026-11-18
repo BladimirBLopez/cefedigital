@@ -7,9 +7,8 @@ export const dynamic = "force-dynamic";
 
 const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-acento";
 
-export default async function Ajustes({ searchParams }) {
+export default async function Ajustes() {
   await requireAdmin();
-  const sp = await searchParams;
   const a = await obtenerAjustes();
   return (
     <>
@@ -29,7 +28,6 @@ export default async function Ajustes({ searchParams }) {
             placeholder={"Ej: Paga por QR o transferencia a la cuenta ...\nEnvía tu comprobante por WhatsApp."}
             className={campo}
           />
-          {sp?.ok && <p className="text-sm text-marino">Guardado</p>}
           <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar ajustes</button>
         </form>
       </main>

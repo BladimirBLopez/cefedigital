@@ -1,6 +1,8 @@
 import "./globals.css";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import NotificacionRuta from "@/components/NotificacionRuta";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,6 +19,9 @@ export default function RootLayout({ children }) {
     <html lang="es">
       <body className={inter.className}>
         {children}
+        <Suspense fallback={null}>
+          <NotificacionRuta />
+        </Suspense>
         <Toaster position="top-center" richColors />
       </body>
     </html>

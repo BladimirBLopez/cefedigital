@@ -33,5 +33,5 @@ export async function borrarProducto(formData) {
   if (borrado[0]) await anotar("borrar", "producto", id, `Borró "${borrado[0].nombre}"`);
   revalidatePath("/");
   revalidatePath("/admin/productos");
-  redirect("/admin/productos?ok=borrado");
+  redirect("/admin/productos?aviso=producto_eliminado");
 }

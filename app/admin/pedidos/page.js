@@ -27,6 +27,7 @@ const ERRORES = {
   cancelado: "Ese pedido está cancelado",
   no_existe: "El pedido no existe",
   fallo: "No se pudo confirmar, intenta de nuevo",
+  cancelacion: "No se pudo cancelar. Comprueba que el pedido siga pendiente.",
 };
 
 const fecha = (d) => new Date(d).toLocaleString("es-BO", { timeZone: "America/La_Paz" });
@@ -85,7 +86,6 @@ export default async function Pedidos({ searchParams }) {
         </form>
         {q && <p className="text-xs text-neutral-500 mb-3">Resultados para "{q}" · <a href={href(estado)} className="underline text-marino">Quitar búsqueda</a></p>}
 
-        {sp?.ok && <p className="mb-3 rounded-xl border border-esmeralda bg-esmeralda/10 px-4 py-3 text-sm text-marino">Pedido marcado como entregado</p>}
         {sp?.error && <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ERRORES[sp.error] || ERRORES.fallo}</p>}
 
         <ul className="space-y-3">

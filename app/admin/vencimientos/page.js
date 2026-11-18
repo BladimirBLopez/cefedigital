@@ -14,8 +14,13 @@ function textoDias(d) {
   return `Vence en ${d} ${d === 1 ? "día" : "días"}`;
 }
 
-export default async function Vencimientos() {
+const ERRORES = {
+  avisado: "No se pudo marcar el servicio como avisado. Actualiza la página e inténtalo nuevamente."
+};
+
+export default async function Vencimientos({ searchParams }) {
   await requireAdmin();
+  const sp = await searchParams;
   const filas = await sql`
     select pi.id, pi.avisado_en, pr.nombre as producto, c.nombre as cliente, c.whatsapp, p.codigo,
       pi.vence_en,
@@ -42,6 +47,11 @@ export default async function Vencimientos() {
       <AdminNav />
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-xl font-semibold">Servicios por vencer</h1>
+        {sp?.error && (
+          <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {ERRORES[sp.error] || "No se pudo completar la operación."}
+          </p>
+        )}
         <p className="text-xs text-neutral-500 mb-4">{sinAvisar} sin avisar · Vencen en 2 días o menos, o vencieron hace poco.</p>
         {filas.length === 0 && <p className="text-sm text-neutral-500">No hay servicios por vencer.</p>}
         <div className="space-y-5">

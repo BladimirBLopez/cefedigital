@@ -8,6 +8,12 @@ export const dynamic = "force-dynamic";
 
 const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-acento";
 
+const ERRORES = {
+  producto: "Selecciona un producto válido.",
+  vacio: "Escribe al menos una clave o cuenta.",
+  stock_borrado: "No se pudo eliminar el registro de stock."
+};
+
 function tapar(dato) {
   return dato.slice(0, 4) + "••••••";
 }
@@ -34,8 +40,7 @@ export default async function Stock({ searchParams }) {
             ))}
           </select>
           <textarea name="datos" rows={5} required placeholder={"Una clave o cuenta por línea\nAAAAA-BBBBB-CCCCC\ncorreo@ejemplo.com:clave"} className={campo} />
-          {sp?.error && <p className="text-sm text-red-600">Elige un producto y escribe al menos una línea</p>}
-          {sp?.ok && <p className="text-sm text-marino">Se agregaron {sp.ok}</p>}
+          {sp?.error && <p className="text-sm text-red-600">{ERRORES[sp.error] || "No se pudo completar la operación."}</p>}
           <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Agregar al stock</button>
         </form>
 

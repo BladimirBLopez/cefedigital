@@ -109,7 +109,6 @@ export default async function Productos({ searchParams }) {
         </div>
 
         <Link href="/admin/productos/nuevo" className="mb-5 block rounded-xl bg-intenso hover:bg-marino text-white text-center font-semibold py-3">+ Nuevo producto</Link>
-        {sp?.ok && <p className="text-sm text-marino mb-3">{sp.ok === "borrado" ? "Producto borrado" : "Producto guardado"}</p>}
         {["pedidos", "borrar"].includes(sp?.error) && <p className="text-sm text-red-600 mb-3">{ERRORES[sp.error]}</p>}
 
         <form method="get" className="flex gap-2 mb-3">

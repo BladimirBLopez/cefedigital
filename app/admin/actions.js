@@ -63,7 +63,7 @@ function leerProducto(formData) {
 
 export async function salir() {
   await cerrarSesion();
-  redirect("/admin/login");
+  redirect("/admin/login?aviso=sesion_cerrada");
 }
 
 export async function crearProducto(formData) {
@@ -159,26 +159,31 @@ export async function crearProducto(formData) {
   );
   revalidatePath("/");
   revalidatePath("/admin/productos");
-  redirect("/admin/productos?ok=1");
+  redirect("/admin/productos?aviso=producto_creado");
 }
 
 export async function cambiarActivo(formData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
-  if (!Number.isInteger(id)) return;
+  if (!Number.isInteger(id)) return { ok: false };
+
   const r = await sql`
     update productos set activo = not activo where id = ${id}
     returning nombre, activo`;
-  if (r[0]) {
-    await anotar(
-      r[0].activo ? "activar" : "ocultar",
-      "producto",
-      id,
-      `${r[0].activo ? "Puso a la venta" : "Ocultó"} "${r[0].nombre}"`
-    );
-  }
+
+  if (!r[0]) return { ok: false };
+
+  await anotar(
+    r[0].activo ? "activar" : "ocultar",
+    "producto",
+    id,
+    `${r[0].activo ? "Puso a la venta" : "Ocultó"} "${r[0].nombre}"`
+  );
+
   revalidatePath("/");
   revalidatePath("/admin/productos");
+
+  return { ok: true, activo: r[0].activo };
 }
 
 export async function agregarStock(formData) {
@@ -198,22 +203,40 @@ export async function agregarStock(formData) {
   await anotar("stock_agregar", "stock", id, `Agregó ${lineas.length} al stock de "${pr[0]?.nombre ?? id}"`);
   revalidatePath("/admin/stock");
   revalidatePath("/admin/productos");
-  redirect(`/admin/stock?ok=${lineas.length}`);
+  redirect(`/admin/stock?aviso=stock_agregado&cantidad=${lineas.length}`);
 }
 
 export async function borrarStock(formData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
-  if (!Number.isInteger(id)) return;
-  const r = await sql`
-    delete from stock where id = ${id} and estado = 'disponible'
-    returning producto_id`;
-  if (r[0]) {
-    const pr = await sql`select nombre from productos where id = ${r[0].producto_id}`;
-    await anotar("stock_borrar", "stock", r[0].producto_id, `Borró 1 del stock de "${pr[0]?.nombre ?? r[0].producto_id}"`);
+
+  if (!Number.isInteger(id)) {
+    redirect("/admin/stock?error=producto");
   }
+
+  const r = await sql`
+    delete from stock
+    where id = ${id} and estado = 'disponible'
+    returning producto_id`;
+
+  if (!r[0]) {
+    redirect("/admin/stock?error=stock_borrado");
+  }
+
+  const pr = await sql`
+    select nombre from productos where id = ${r[0].producto_id}`;
+
+  await anotar(
+    "stock_borrar",
+    "stock",
+    r[0].producto_id,
+    `Borró 1 del stock de "${pr[0]?.nombre ?? r[0].producto_id}"`
+  );
+
   revalidatePath("/admin/stock");
   revalidatePath("/admin/productos");
+
+  redirect("/admin/stock?aviso=stock_borrado");
 }
 
 export async function editarProducto(formData) {
@@ -274,5 +297,5 @@ export async function editarProducto(formData) {
   revalidatePath("/");
   revalidatePath("/admin/productos");
   revalidatePath("/admin/registro");
-  redirect(`${base}?ok=1`);
+  redirect(`${base}?aviso=producto_actualizado`);
 }

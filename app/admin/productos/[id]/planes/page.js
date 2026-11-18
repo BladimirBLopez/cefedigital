@@ -15,7 +15,6 @@ const ERRORES = {
   repetido: "Ya existe un plan igual (mismas pantallas y meses)",
   usado: "Este plan ya tiene pedidos. No se puede borrar, mejor desactívalo.",
 };
-const OKS = { agregado: "Plan agregado", guardado: "Cambios guardados", borrado: "Plan borrado" };
 const mini = "w-24 rounded-lg bg-neutral-100 border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-intenso";
 
 export default async function Planes({ params, searchParams }) {
@@ -38,7 +37,6 @@ export default async function Planes({ params, searchParams }) {
         <Link href={`/admin/productos/${id}`} className="text-sm font-medium text-marino">← Volver a {prod.nombre}</Link>
         <h1 className="text-xl font-semibold">Planes de {prod.nombre}</h1>
         {ERRORES[sp?.error] && <p className="text-sm text-red-600">{ERRORES[sp.error]}</p>}
-        {OKS[sp?.ok] && <p className="text-sm text-marino">{OKS[sp.ok]}</p>}
 
         <FormPlan action={agregarPlan} productoId={id} />
 

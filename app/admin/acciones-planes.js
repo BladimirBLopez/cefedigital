@@ -56,7 +56,7 @@ export async function agregarPlan(formData) {
   await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
-  redirect(`${ruta(pid)}?ok=agregado`);
+  redirect(`${ruta(pid)}?aviso=plan_agregado`);
 }
 
 export async function editarPrecioPlan(formData) {
@@ -72,18 +72,33 @@ export async function editarPrecioPlan(formData) {
   await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
-  redirect(`${ruta(pid)}?ok=guardado`);
+  redirect(`${ruta(pid)}?aviso=plan_actualizado`);
 }
 
 export async function cambiarActivoPlan(formData) {
   await requireAdmin();
   const pid = Number(formData.get("producto_id"));
   const id = Number(formData.get("id"));
-  if (!Number.isInteger(pid) || !Number.isInteger(id)) return;
-  await sql`update planes set activo = not activo where id = ${id} and producto_id = ${pid}`;
+
+  if (!Number.isInteger(pid) || !Number.isInteger(id)) {
+    redirect("/admin/productos");
+  }
+
+  const r = await sql`
+    update planes
+    set activo = not activo
+    where id = ${id} and producto_id = ${pid}
+    returning activo`;
+
+  if (!r[0]) redirect(`${ruta(pid)}?error=plan_no_existe`);
+
   await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
+
+  redirect(
+    `${ruta(pid)}?aviso=${r[0].activo ? "plan_activado" : "plan_desactivado"}`
+  );
 }
 
 export async function borrarPlan(formData) {
@@ -97,5 +112,5 @@ export async function borrarPlan(formData) {
   await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
-  redirect(`${ruta(pid)}?ok=borrado`);
+  redirect(`${ruta(pid)}?aviso=plan_borrado`);
 }

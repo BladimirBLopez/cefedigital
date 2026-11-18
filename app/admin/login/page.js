@@ -13,7 +13,7 @@ async function entrar(formData) {
     redirect("/admin/login?error=1");
   }
   await crearSesion();
-  redirect("/admin");
+  redirect("/admin?aviso=sesion_iniciada");
 }
 
 export default async function Login({ searchParams }) {

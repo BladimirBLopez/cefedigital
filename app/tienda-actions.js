@@ -39,7 +39,7 @@ export async function crearPedido(formData) {
   await sql`
     insert into pedido_items (pedido_id, producto_id, cantidad, precio_unit, dato_cliente, plan_id, plan_nombre, costo_unit)
     values (${ped.id}, ${p.id}, ${cant}, ${precioUnit}, ${dato || null}, ${plan ? plan.id : null}, ${plan ? plan.nombre : null}, ${plan ? plan.costo : null})`;
-  redirect(`/pedido/${codigo}`);
+  redirect(`/pedido/${codigo}?aviso=pedido_creado`);
 }
 
 export async function crearPedidoCarrito(formData) {
@@ -92,5 +92,5 @@ export async function crearPedidoCarrito(formData) {
     }
     redirect("/carrito?error=fallo");
   }
-  redirect(`/pedido/${codigo}?nuevo=1`);
+  redirect(`/pedido/${codigo}?nuevo=1&aviso=pedido_creado`);
 }

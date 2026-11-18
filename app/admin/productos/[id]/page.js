@@ -69,9 +69,6 @@ export default async function EditarProducto({ params, searchParams }) {
         {ERRORES[sp?.error] && (
           <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ERRORES[sp.error]}</p>
         )}
-        {sp?.ok && (
-          <p className="mb-4 rounded-xl border border-esmeralda bg-esmeralda/10 px-4 py-3 text-sm text-marino">Cambios guardados</p>
-        )}
 
         <form action={editarProducto} className="space-y-4">
           <input type="hidden" name="id" value={p.id} />
