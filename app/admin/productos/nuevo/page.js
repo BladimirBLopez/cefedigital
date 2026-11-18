@@ -3,7 +3,6 @@ import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
 import SubirFoto from "@/components/SubirFoto";
 import CamposProducto from "@/components/CamposProducto";
-import SwitchVenta from "@/components/SwitchVenta";
 import { crearProducto } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -67,11 +66,6 @@ export default async function NuevoProducto({ searchParams }) {
               Vence lo que compraste al proveedor (opcional)
               <input name="vence" type="date" className={campo + " mt-1"} />
             </label>
-          </section>
-
-          <section className={tarjeta}>
-            <h2 className={titulo}>4. Publicación</h2>
-            <SwitchVenta />
           </section>
 
           <div className="sticky bottom-0 -mx-4 flex gap-3 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">

@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-acento";
 const tarjeta = "rounded-2xl bg-white border border-neutral-200 p-4 space-y-3";
 const rotulo = "block text-xs font-medium text-neutral-500";
+const titulo = "text-sm font-semibold text-marino";
 
 const TIPOS = { clave: "Clave o licencia", cuenta: "Cuenta con planes", recarga: "Recarga con ID" };
 
@@ -77,6 +78,7 @@ export default async function EditarProducto({ params, searchParams }) {
           <input type="hidden" name="imagen_url" value={p.imagen_url || ""} />
 
           <section className={tarjeta}>
+            <h2 className={titulo}>1. Foto y nombre</h2>
             <SubirFoto actual={p.imagen_url || ""} />
             <label className={rotulo}>
               Nombre
@@ -85,6 +87,7 @@ export default async function EditarProducto({ params, searchParams }) {
           </section>
 
           <section className={tarjeta}>
+            <h2 className={titulo}>2. Tipo y precios</h2>
             <CamposProducto tipo={p.tipo} campoCliente={p.campo_cliente} duracion={p.duracion_dias} sinDuracion={planes.length > 0} />
             <div className="grid grid-cols-2 gap-3">
               <label className={rotulo}>
@@ -99,6 +102,7 @@ export default async function EditarProducto({ params, searchParams }) {
           </section>
 
           <section className={tarjeta}>
+            <h2 className={titulo}>3. Detalles</h2>
             <label className={rotulo}>
               Descripción
               <textarea name="descripcion" rows={2} defaultValue={p.descripcion || ""} className={campo + " mt-1"} />
@@ -109,8 +113,9 @@ export default async function EditarProducto({ params, searchParams }) {
             </label>
           </section>
 
-          <div className="sticky bottom-0 -mx-4 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
-            <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar cambios</button>
+          <div className="sticky bottom-0 -mx-4 flex gap-3 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
+            <Link href="/admin/productos" className="rounded-xl border border-neutral-300 px-5 py-3 text-center font-semibold text-neutral-600">Volver</Link>
+            <button className="flex-1 rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar cambios</button>
           </div>
         </form>
 
