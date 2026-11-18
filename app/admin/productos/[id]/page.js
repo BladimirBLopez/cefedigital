@@ -41,6 +41,10 @@ export default async function EditarProducto({ params, searchParams }) {
   const p = r[0];
   if (!p) notFound();
   const ev = estadoVence(p.vence);
+  const planes =
+    p.tipo === "cuenta"
+      ? await sql`select id, nombre, precio::float as precio, costo::float as costo, activo from planes where producto_id = ${id} order by orden, id`
+      : [];
 
   return (
     <>
@@ -86,8 +90,8 @@ export default async function EditarProducto({ params, searchParams }) {
             <CamposProducto tipo={p.tipo} campoCliente={p.campo_cliente} duracion={p.duracion_dias} />
             <div className="grid grid-cols-2 gap-3">
               <label className={rotulo}>
-                Precio (Bs)
-                <input name="precio" required inputMode="decimal" defaultValue={p.precio} className={campo + " mt-1"} />
+                {planes.length > 0 ? "Precio desde (Bs)" : "Precio (Bs)"}
+                <input name="precio" required inputMode="decimal" defaultValue={p.precio} readOnly={planes.length > 0} className={campo + " mt-1" + (planes.length > 0 ? " opacity-60" : "")} />
               </label>
               <label className={rotulo}>
                 Vence (proveedor)
@@ -112,9 +116,25 @@ export default async function EditarProducto({ params, searchParams }) {
           </div>
         </form>
 
+        {planes.length > 0 && (
+          <section className="mt-4 rounded-2xl bg-white border border-neutral-200 p-4">
+            <h2 className="text-sm font-semibold mb-2">Planes registrados</h2>
+            <ul className="divide-y divide-neutral-100">
+              {planes.map((pl) => (
+                <li key={pl.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span className={"min-w-0 truncate " + (pl.activo ? "" : "text-neutral-400")}>{pl.nombre}{pl.activo ? "" : " · Oculto"}</span>
+                  <span className="shrink-0 text-right">
+                    <span className="font-semibold">Bs {pl.precio.toFixed(2)}</span>
+                    {pl.costo > 0 && <span className="block text-xs text-neutral-500">Te cuesta Bs {pl.costo.toFixed(2)}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {p.tipo === "cuenta" && (
           <Link href={`/admin/productos/${p.id}/planes`} className="mt-4 block rounded-2xl bg-white border border-esmeralda p-4 text-center font-semibold text-marino hover:bg-esmeralda/10">
-            Planes y precios →
+            Editar planes y precios →
           </Link>
         )}
         <div className="mt-6 flex justify-end">

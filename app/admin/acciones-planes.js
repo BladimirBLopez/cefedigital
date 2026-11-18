@@ -7,6 +7,13 @@ import { requireAdmin } from "@/lib/auth";
 
 const ruta = (id) => `/admin/productos/${id}/planes`;
 
+async function sincronizarPrecio(pid) {
+  await sql`
+    update productos
+    set precio = coalesce((select min(precio) from planes where producto_id = ${pid} and activo), precio)
+    where id = ${pid}`;
+}
+
 function entero(v, min, max) {
   const n = Number(v);
   return Number.isInteger(n) && n >= min && n <= max ? n : null;
@@ -46,6 +53,7 @@ export async function agregarPlan(formData) {
   await sql`
     insert into planes (producto_id, perfil, pantallas, meses_pagados, meses_gratis, duracion_dias, nombre, costo, precio, activo, orden)
     values (${pid}, ${perfil}, ${pantallas}, ${pagados}, ${gratis}, ${duracion}, ${nombre}, ${costo}, ${precio}, true, ${orden})`;
+  await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
   redirect(`${ruta(pid)}?ok=agregado`);
@@ -61,6 +69,7 @@ export async function editarPrecioPlan(formData) {
   if (precio === null || Number.isNaN(precio)) redirect(`${ruta(pid)}?error=precio`);
   if (Number.isNaN(costo)) redirect(`${ruta(pid)}?error=costo`);
   await sql`update planes set precio = ${precio}, costo = ${costo} where id = ${id} and producto_id = ${pid}`;
+  await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
   redirect(`${ruta(pid)}?ok=guardado`);
@@ -72,6 +81,7 @@ export async function cambiarActivoPlan(formData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(pid) || !Number.isInteger(id)) return;
   await sql`update planes set activo = not activo where id = ${id} and producto_id = ${pid}`;
+  await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
 }
@@ -84,6 +94,7 @@ export async function borrarPlan(formData) {
   const usado = await sql`select 1 from pedido_items where plan_id = ${id} limit 1`;
   if (usado.length > 0) redirect(`${ruta(pid)}?error=usado`);
   await sql`delete from planes where id = ${id} and producto_id = ${pid}`;
+  await sincronizarPrecio(pid);
   revalidatePath(ruta(pid));
   revalidatePath("/");
   redirect(`${ruta(pid)}?ok=borrado`);

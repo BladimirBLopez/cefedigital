@@ -212,6 +212,7 @@ export default async function Productos({ searchParams }) {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
+                  <Link href={`/admin/productos/${p.id}`} className="rounded-full border border-marino px-3 py-1 text-xs font-semibold text-marino hover:bg-marino hover:text-white">Editar</Link>
                   <Interruptor id={p.id} activo={p.activo} />
                   <BorrarProducto id={p.id} nombre={p.nombre} />
                 </div>
