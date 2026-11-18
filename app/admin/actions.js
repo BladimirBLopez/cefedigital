@@ -70,7 +70,7 @@ export async function crearProducto(formData) {
   await requireAdmin();
   await asegurarEsquema();
   const p = leerProducto(formData);
-  if (p.error) redirect(`/admin/productos?error=${p.error}`);
+  if (p.error) redirect(`/admin/productos/nuevo?error=${p.error}`);
   p.categoria = CATEGORIAS[p.tipo];
 
   const planesNuevos = [];
@@ -94,9 +94,9 @@ export async function crearProducto(formData) {
       if (!okInt(pant, 1, 10) || !okInt(m, 1, 36)) continue;
       const pr = dinero(preciosF[i]);
       const co = dinero(costosF[i]);
-      if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos?error=precio");
+      if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos/nuevo?error=precio");
       if (pr === null) continue;
-      if (vistos.has(`${pant}-${m}`)) redirect("/admin/productos?error=repetidas");
+      if (vistos.has(`${pant}-${m}`)) redirect("/admin/productos/nuevo?error=repetidas");
       vistos.add(`${pant}-${m}`);
       planesNuevos.push({
         perfil: pant === 1 ? "1 pantalla" : `${pant} pantallas`,
@@ -106,7 +106,7 @@ export async function crearProducto(formData) {
         costo: co === null ? 0 : Math.round(co * 100) / 100,
       });
     }
-    if (planesNuevos.length === 0) redirect("/admin/productos?error=planes");
+    if (planesNuevos.length === 0) redirect("/admin/productos/nuevo?error=planes");
     precioProducto = Math.min(...planesNuevos.map((x) => x.precio));
   }
 
@@ -114,7 +114,7 @@ export async function crearProducto(formData) {
   try {
     imagen = await subirFoto(formData.get("foto"));
   } catch {
-    redirect("/admin/productos?error=foto");
+    redirect("/admin/productos/nuevo?error=foto");
   }
 
   const base = hacerSlug(p.nombre) || "producto";
@@ -130,6 +130,7 @@ export async function crearProducto(formData) {
       returning id`;
   }
   if (p.duracion && r[0]?.id) await sql`update productos set duracion_dias = ${p.duracion} where id = ${r[0].id}`;
+  if (p.instrucciones && r[0]?.id) await sql`update productos set instrucciones = ${p.instrucciones} where id = ${r[0].id}`;
   if (String(formData.get("activo")) === "0" && r[0]?.id) await sql`update productos set activo = false where id = ${r[0].id}`;
   if (p.tipo === "cuenta" && r[0]?.id) {
     let falloPlanes = false;
@@ -147,7 +148,7 @@ export async function crearProducto(formData) {
     if (falloPlanes) {
       await sql`delete from planes where producto_id = ${r[0].id}`;
       await sql`delete from productos where id = ${r[0].id}`;
-      redirect("/admin/productos?error=planesdb");
+      redirect("/admin/productos/nuevo?error=planesdb");
     }
   }
   await anotar(

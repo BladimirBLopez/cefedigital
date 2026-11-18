@@ -108,22 +108,7 @@ export default async function Productos({ searchParams }) {
           ))}
         </div>
 
-        <details open={!!sp?.error && !["pedidos", "borrar"].includes(sp.error)} className="rounded-2xl bg-white border border-neutral-200 mb-5">
-          <summary className="cursor-pointer select-none px-4 py-3 font-medium text-marino">+ Registrar producto</summary>
-          <form action={crearProducto} className="p-4 pt-0 space-y-3">
-            <SubirFoto />
-            <input name="nombre" required placeholder="Nombre (ej: Windows 11 Pro)" className={campo} />
-            <CamposProducto conPlan />
-            <label className="block text-xs text-neutral-500">
-              Vence (proveedor, opcional)
-              <input name="vence" type="date" className={campo + " mt-1"} />
-            </label>
-            <textarea name="descripcion" rows={2} placeholder="Descripción corta" className={campo} />
-            {ERRORES[sp?.error] && <p className="text-sm text-red-600">{ERRORES[sp.error]}</p>}
-            <SwitchVenta />
-            <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar producto</button>
-          </form>
-        </details>
+        <Link href="/admin/productos/nuevo" className="mb-5 block rounded-xl bg-intenso hover:bg-marino text-white text-center font-semibold py-3">+ Nuevo producto</Link>
         {sp?.ok && <p className="text-sm text-marino mb-3">{sp.ok === "borrado" ? "Producto borrado" : "Producto guardado"}</p>}
         {["pedidos", "borrar"].includes(sp?.error) && <p className="text-sm text-red-600 mb-3">{ERRORES[sp.error]}</p>}
 
