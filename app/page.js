@@ -3,6 +3,7 @@ import { sql } from "@/lib/db";
 import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
+import { optimizar } from "@/lib/imagen";
 import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function Home({ searchParams }) {
           {prods.length === 0 && <p className="col-span-full text-sm text-neutral-500">{q ? "No encontramos productos con ese nombre." : "Pronto habrá productos."}</p>}
           {prods.map((p) => (
             <Link key={p.slug} href={`/producto/${p.slug}`} className="group rounded-2xl bg-white border border-neutral-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition p-3 flex flex-col">
-              {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" /> : <div className="w-full aspect-square rounded-xl mb-3 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
+              {p.imagen_url ? <img src={optimizar(p.imagen_url, 500)} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" /> : <div className="w-full aspect-square rounded-xl mb-3 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
               <span className="self-start rounded-full bg-turquesa/25 text-marino text-[11px] font-medium px-2 py-0.5">{p.categoria || "Digital"}</span>
               <p className="font-medium mt-1">{p.nombre}</p>
               <p className="text-lg font-bold text-intenso mt-auto pt-3">Bs {p.precio.toFixed(2)}</p>

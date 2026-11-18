@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { FiMinus, FiPlus, FiTrash2, FiShoppingCart, FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 import { crearPedidoCarrito } from "@/app/tienda-actions";
 import { leerCarrito, guardarCarrito } from "./carritoLocal";
+import { optimizar } from "@/lib/imagen";
 
 const campo = "w-full rounded-xl bg-white border border-neutral-300 px-4 py-3 outline-none focus:border-intenso";
 
@@ -73,7 +74,7 @@ export default function CarritoCliente({ error }) {
         {items.map((i, k) => (
           <li key={k} className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-3 flex gap-3">
             {i.imagen ? (
-              <img src={i.imagen} alt={i.nombre} loading="lazy" className="h-20 w-20 rounded-xl object-cover" />
+              <img src={optimizar(i.imagen, 200)} alt={i.nombre} loading="lazy" className="h-20 w-20 rounded-xl object-cover" />
             ) : (
               <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-intenso/10 to-turquesa/20" />
             )}

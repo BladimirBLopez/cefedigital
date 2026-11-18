@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
+import { optimizar } from "@/lib/imagen";
 import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 import { crearPedido } from "@/app/tienda-actions";
 import SelectorPlan from "@/components/SelectorPlan";
@@ -43,7 +44,7 @@ export default async function Producto({ params, searchParams }) {
       <main className="mx-auto max-w-3xl px-4 py-6">
         <Link href="/" className="text-sm font-medium text-marino hover:text-intenso">← Volver a la tienda</Link>
         <div className="mt-4 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
-          {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} className="w-full max-h-72 object-cover rounded-xl mb-4" /> : <div className="w-full h-40 rounded-xl mb-4 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
+          {p.imagen_url ? <img src={optimizar(p.imagen_url, 900)} alt={p.nombre} className="w-full max-h-72 object-cover rounded-xl mb-4" /> : <div className="w-full h-40 rounded-xl mb-4 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
           {p.categoria && <span className="inline-block rounded-full bg-turquesa/25 text-marino text-xs font-medium px-2.5 py-0.5">{p.categoria}</span>}
           <h1 className="text-2xl font-bold mt-2">{p.nombre}</h1>
           <p className="text-3xl font-bold text-intenso mt-3">{hayPlanes && <span className="text-base font-medium text-neutral-500">Desde </span>}Bs {desde.toFixed(2)}</p>
