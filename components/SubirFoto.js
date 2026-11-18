@@ -18,10 +18,12 @@ async function reducir(file) {
 export default function SubirFoto({ actual }) {
   const ref = useRef(null);
   const [vista, setVista] = useState(actual || "");
+  const [quitar, setQuitar] = useState(false);
 
   async function alElegir(e) {
     const f = e.target.files?.[0];
     if (!f) return;
+    setQuitar(false);
     try {
       const p = await reducir(f);
       const dt = new DataTransfer();
@@ -47,6 +49,10 @@ export default function SubirFoto({ actual }) {
         {vista ? "Cambiar foto" : "Subir foto"}
         <input ref={ref} type="file" name="foto" accept="image/*" onChange={alElegir} className="hidden" />
       </label>
+      {vista && (
+        <button type="button" onClick={() => { setVista(""); setQuitar(true); if (ref.current) ref.current.value = ""; }} className="text-sm text-red-600">Quitar</button>
+      )}
+      <input type="hidden" name="quitar_foto" value={quitar ? "1" : ""} />
     </div>
   );
 }

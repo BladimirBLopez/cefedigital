@@ -222,7 +222,8 @@ export async function editarProducto(formData) {
   } catch {
     redirect(`${base}?error=foto`);
   }
-  const imagen = nueva || actual || null;
+  const quitar = formData.get("quitar_foto") === "1";
+  const imagen = nueva || (quitar ? null : actual) || null;
 
   const antesFilas = await sql`
     select nombre, categoria, descripcion, precio::float as precio, imagen_url,
