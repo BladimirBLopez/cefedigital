@@ -6,7 +6,7 @@ import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 import { crearPedido } from "@/app/tienda-actions";
-import SelectorPlanes from "@/components/SelectorPlanes";
+import SelectorPlan from "@/components/SelectorPlan";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function Producto({ params, searchParams }) {
   if (!p) notFound();
   const esRecarga = p.tipo === "recarga";
   const max = 5;
-  const planes = await sql`select id, perfil, meses_pagados, meses_gratis, precio::float as precio from planes where producto_id = ${p.id} and activo order by orden, id`;
+  const planes = await sql`select id, perfil, pantallas, meses_pagados, meses_gratis, precio::float as precio from planes where producto_id = ${p.id} and activo order by orden, id`;
   const hayPlanes = planes.length > 0;
   const desde = hayPlanes ? Math.min(...planes.map((x) => x.precio)) : p.precio;
   const grupos = [];
@@ -59,7 +59,7 @@ export default async function Producto({ params, searchParams }) {
             <p className="text-xs text-neutral-500">Llena tus datos y te escribimos por WhatsApp cuando confirmemos tu pago.</p>
             <input type="hidden" name="producto_id" value={p.id} />
             <input type="hidden" name="slug" value={p.slug} />
-            {hayPlanes && <SelectorPlanes grupos={grupos} />}
+            {hayPlanes && <SelectorPlan planes={planes} />}
             <input name="nombre" required maxLength={80} placeholder="Tu nombre" className={campo} />
             <input name="whatsapp" required inputMode="tel" placeholder="Tu WhatsApp (ej: 71234567)" className={campo} />
             {esRecarga && p.campo_cliente && (
