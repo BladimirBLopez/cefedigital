@@ -7,6 +7,7 @@ import TiendaFooter from "@/components/TiendaFooter";
 import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
 import { crearPedido } from "@/app/tienda-actions";
 import SelectorPlan from "@/components/SelectorPlan";
+import AgregarCarrito from "@/components/AgregarCarrito";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function Producto({ params, searchParams }) {
             {sp?.error === "plan" && <p className="text-sm text-red-600">Elige un plan para continuar</p>}
             {sp?.error === "stock" && <p className="text-sm text-red-600">No alcanza el stock para esa cantidad</p>}
             {sp?.error === "limite" && <p className="text-sm text-red-600">Hiciste muchos pedidos seguidos. Espera un rato o escríbenos por WhatsApp.</p>}
+            <AgregarCarrito producto={{ id: Number(p.id), slug: p.slug, nombre: p.nombre, imagen: p.imagen_url, precio: p.precio, esRecarga, campo_cliente: p.campo_cliente }} planes={planes} />
             <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3 transition">Pedir ahora</button>
           </form>
         )}

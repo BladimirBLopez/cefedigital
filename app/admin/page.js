@@ -53,7 +53,10 @@ export default async function Resumen() {
       (select coalesce(sum(total), 0)::float from v, h where v.dia >= date_trunc('month', h.d::timestamp)::date) as mes,
       (select coalesce(sum(pi.cantidad * (pi.precio_unit - pi.costo_unit)), 0)::float
          from pedido_items pi join v on v.id = pi.pedido_id, h
-         where pi.costo_unit is not null and v.dia >= date_trunc('month', h.d::timestamp)::date) as ganancia_mes`;
+         where pi.costo_unit is not null and v.dia >= date_trunc('month', h.d::timestamp)::date) as ganancia_mes,
+      (select count(*)::int from pedido_items pi join pedidos pe on pe.id = pi.pedido_id
+         where pe.estado = 'entregado' and pi.vence_en is not null and pi.avisado_en is null
+           and pi.vence_en < now() + interval '2 days' and pi.vence_en > now() - interval '15 days') as por_avisar`;
   const ultimos = await sql`
     select p.codigo, p.total::float as total, p.estado, p.creado_en, c.nombre
     from pedidos p join clientes c on c.id = p.cliente_id
@@ -65,9 +68,10 @@ export default async function Resumen() {
       <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
         <h1 className="text-xl font-semibold">Resumen</h1>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Atencion href="/admin/pedidos?estado=pagado" titulo="Por entregar" valor={r.por_entregar} />
-          <Atencion href="/admin/pedidos?estado=pendiente" titulo="Pendientes de pago" valor={r.pendientes} />
+          <Atencion href="/admin/pedidos?estado=pendiente" titulo="Sin pagar" valor={r.pendientes} />
+          <Atencion href="/admin/vencimientos" titulo="Por avisar" valor={r.por_avisar} />
         </div>
 
         <section>

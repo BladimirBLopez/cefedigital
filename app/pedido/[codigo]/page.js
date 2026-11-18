@@ -4,6 +4,7 @@ import { obtenerAjustes, limpiarWhatsapp } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import { descifrar } from "@/lib/cripto";
+import VaciarCarrito from "@/components/VaciarCarrito";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false } };
@@ -15,8 +16,9 @@ const ESTADOS = {
   cancelado: "Cancelado",
 };
 
-export default async function Pedido({ params }) {
+export default async function Pedido({ params, searchParams }) {
   const { codigo } = await params;
+  const sp = await searchParams;
   const aj = await obtenerAjustes();
   const [ped] = await sql`
     select p.id, p.codigo, p.total::float as total, p.estado, c.nombre
@@ -44,6 +46,7 @@ export default async function Pedido({ params }) {
     <>
       <TiendaHeader nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-4">
+        {sp?.nuevo && <VaciarCarrito />}
         <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
           <p className="text-xs text-neutral-500">Tu pedido</p>
           <p className="text-2xl font-bold font-mono text-intenso tracking-wider">{ped.codigo}</p>
