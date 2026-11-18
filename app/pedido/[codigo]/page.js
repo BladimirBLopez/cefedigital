@@ -82,7 +82,7 @@ export default async function Pedido({ params, searchParams }) {
                 Enviar comprobante por WhatsApp
               </a>
             )}
-            <p className="text-xs text-neutral-500 mt-3">Cuando confirmemos tu pago, te enviamos tu clave o cuenta por WhatsApp.</p>
+            <p className="text-xs text-neutral-500 mt-3">Cuando confirmemos tu pago, tu clave o cuenta aparecerá aquí mismo. Guarda tu código.</p>
           </div>
         )}
 
@@ -90,7 +90,7 @@ export default async function Pedido({ params, searchParams }) {
           <div className="rounded-2xl bg-white border border-esmeralda shadow-sm p-5">
             {entregas.length > 0 && <h2 className="font-semibold mb-3 text-marino">Tus claves y cuentas</h2>}
             {hayRecarga && <p className="text-sm font-semibold text-marino mb-2">Tu recarga fue realizada. Si no la ves en tu juego, escríbenos por WhatsApp.</p>}
-            {entregas.length === 0 && !hayRecarga && <p className="text-sm font-semibold text-marino mb-2">Tu pedido fue entregado. Te enviamos tu clave o cuenta por WhatsApp. Si no te llegó, escríbenos.</p>}
+            {entregas.length === 0 && !hayRecarga && <p className="text-sm font-semibold text-marino mb-2">Tu pedido fue entregado. Si no ves tu clave o cuenta aquí, escríbenos por WhatsApp con tu código.</p>}
             <ul className="space-y-2">
               {entregas.map((e) => (
                 <li key={e.id} className="rounded-xl bg-neutral-100 px-4 py-3">

@@ -61,12 +61,12 @@ export default async function Vencimientos() {
                         {textoDias(f.dias)} · {fecha(f.vence_en)}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-3">
-                        <a
+                        {limpiarWhatsapp(f.whatsapp) && (<a
                           href={`https://wa.me/${limpiarWhatsapp(f.whatsapp)}?text=${msg}`}
                           className="text-xs rounded-full bg-esmeralda text-marino font-semibold px-3 py-1.5"
                         >
                           Enviar aviso por WhatsApp
-                        </a>
+                        </a>)}
                         {f.avisado_en ? (
                           <span className="text-xs text-neutral-500 px-3 py-1.5">Avisado el {fecha(f.avisado_en)}</span>
                         ) : (

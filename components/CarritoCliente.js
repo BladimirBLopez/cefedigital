@@ -8,7 +8,6 @@ import { crearPedidoCarrito } from "@/app/tienda-actions";
 import { leerCarrito, guardarCarrito } from "./carritoLocal";
 
 const campo = "w-full rounded-xl bg-white border border-neutral-300 px-4 py-3 outline-none focus:border-intenso";
-const CLIENTE = "cefe_cliente";
 
 const ERRORES = {
   vacio: "Tu carrito está vacío.",
@@ -36,23 +35,10 @@ function Enviar({ total }) {
 
 export default function CarritoCliente({ error }) {
   const [items, setItems] = useState(null);
-  const [nombre, setNombre] = useState("");
-  const [wa, setWa] = useState("");
 
   useEffect(() => {
     setItems(leerCarrito());
-    try {
-      const c = JSON.parse(localStorage.getItem(CLIENTE) || "{}");
-      setNombre(String(c.nombre || ""));
-      setWa(String(c.whatsapp || ""));
-    } catch {}
   }, []);
-
-  const guardarCliente = (n, w) => {
-    try {
-      localStorage.setItem(CLIENTE, JSON.stringify({ nombre: n, whatsapp: w }));
-    } catch {}
-  };
   const cambiar = (nuevos) => {
     setItems(nuevos);
     guardarCarrito(nuevos);
@@ -134,10 +120,7 @@ export default function CarritoCliente({ error }) {
 
       <form action={crearPedidoCarrito} className="mt-5 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
         <input type="hidden" name="items" value={JSON.stringify(payload)} />
-        <h2 className="text-lg font-bold">Tus datos</h2>
-        <p className="text-xs text-neutral-500">Te escribimos por WhatsApp cuando confirmemos tu pago. El total final se confirma al crear el pedido.</p>
-        <input name="nombre" required maxLength={80} placeholder="Tu nombre" value={nombre} onChange={(e) => { setNombre(e.target.value); guardarCliente(e.target.value, wa); }} className={campo} />
-        <input name="whatsapp" required inputMode="tel" placeholder="Tu WhatsApp (ej: 71234567)" value={wa} onChange={(e) => { setWa(e.target.value); guardarCliente(nombre, e.target.value); }} className={campo} />
+        <p className="text-xs text-neutral-500">Al hacer el pedido te damos un código y las instrucciones de pago. El total final se confirma al crear el pedido.</p>
         {error && <p className="text-sm text-red-600">{ERRORES[error] || ERRORES.fallo}</p>}
         <button type="button" onClick={() => { if (window.confirm("¿Vaciar el carrito?")) cambiar([]); }} className="w-full text-xs text-neutral-500">Vaciar carrito</button>
         <Enviar total={total} />

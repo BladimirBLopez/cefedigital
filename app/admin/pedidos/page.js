@@ -110,12 +110,12 @@ export default async function Pedidos({ searchParams }) {
                   {p.ganancia != null && <span className="ml-2 text-xs font-medium text-marino">Ganancia Bs {p.ganancia.toFixed(2)}</span>}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <a
+                  {limpiarWhatsapp(p.whatsapp) && (<a
                     href={`https://wa.me/${limpiarWhatsapp(p.whatsapp)}?text=${mensaje}`}
                     className="text-xs rounded-full border border-neutral-300 text-neutral-600 px-3 py-1.5"
                   >
                     WhatsApp
-                  </a>
+                  </a>)}
                   {p.estado === "pendiente" && (
                     <>
                       <form action={confirmarPago}>

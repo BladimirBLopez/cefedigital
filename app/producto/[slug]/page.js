@@ -57,12 +57,10 @@ export default async function Producto({ params, searchParams }) {
         ) : (
           <form action={crearPedido} className="mt-6 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
             <h2 className="text-lg font-bold">Hacer mi pedido</h2>
-            <p className="text-xs text-neutral-500">Llena tus datos y te escribimos por WhatsApp cuando confirmemos tu pago.</p>
+            <p className="text-xs text-neutral-500">Al hacer el pedido te damos un código y las instrucciones de pago.</p>
             <input type="hidden" name="producto_id" value={p.id} />
             <input type="hidden" name="slug" value={p.slug} />
             {hayPlanes && <SelectorPlan planes={planes} />}
-            <input name="nombre" required maxLength={80} placeholder="Tu nombre" className={campo} />
-            <input name="whatsapp" required inputMode="tel" placeholder="Tu WhatsApp (ej: 71234567)" className={campo} />
             {esRecarga && p.campo_cliente && (
               <input name="dato_cliente" required maxLength={100} placeholder={p.campo_cliente} className={campo} />
             )}
@@ -75,7 +73,6 @@ export default async function Producto({ params, searchParams }) {
               ))}
             </select>
             )}
-            {sp?.error === "datos" && <p className="text-sm text-red-600">Revisa tu nombre y tu número de WhatsApp</p>}
             {sp?.error === "dato" && <p className="text-sm text-red-600">Falta: {p.campo_cliente || "el dato de tu cuenta"}</p>}
             {sp?.error === "plan" && <p className="text-sm text-red-600">Elige un plan para continuar</p>}
             {sp?.error === "stock" && <p className="text-sm text-red-600">No alcanza el stock para esa cantidad</p>}
