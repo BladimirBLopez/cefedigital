@@ -72,6 +72,12 @@ export default async function EditarProducto({ params, searchParams }) {
           {sp?.ok && <p className="text-sm text-marino">Cambios guardados</p>}
           <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar cambios</button>
         </form>
+
+        {p.tipo === "cuenta" && (
+          <Link href={`/admin/productos/${p.id}/planes`} className="mt-4 block rounded-2xl bg-white border border-esmeralda p-4 text-center font-semibold text-marino hover:bg-esmeralda/10">
+            Planes: pantallas, meses y precios →
+          </Link>
+        )}
       </main>
     </>
   );
