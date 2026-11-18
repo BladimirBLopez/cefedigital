@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { MODALIDADES } from "@/lib/modalidades";
 
 const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-intenso";
 const rango = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
@@ -11,7 +12,7 @@ export default function FormPlan({ action, productoId }) {
   const [pag, setPag] = useState(1);
   const [precio, setPrecio] = useState("");
   const [costo, setCosto] = useState("");
-  const [compartida, setCompartida] = useState(false);
+  const [modalidad, setModalidad] = useState("completa");
 
   const p = Number(String(precio).replace(",", "."));
   const c = Number(String(costo).replace(",", "."));
@@ -24,22 +25,14 @@ export default function FormPlan({ action, productoId }) {
       <input type="hidden" name="producto_id" value={productoId} />
       <h2 className="font-semibold">Agregar plan</h2>
 
-      <input type="hidden" name="compartida" value={compartida ? "true" : "false"} />
-
-      <div className="rounded-xl border border-neutral-200 p-3 space-y-1">
-        <label className="flex items-center gap-2 text-sm text-neutral-700">
-          <input
-            type="checkbox"
-            checked={compartida}
-            onChange={(e) => setCompartida(e.target.checked)}
-            className="h-4 w-4 rounded border-neutral-300 text-intenso focus:ring-intenso"
-          />
-          Cuenta compartida
-        </label>
-        <p className="text-xs text-neutral-500">
-          Marcado: perfil compartido. Sin marcar: cuenta completa.
-        </p>
-      </div>
+      <label className="block text-xs text-neutral-500">
+        Modalidad de la cuenta
+        <select name="modalidad" value={modalidad} onChange={(e) => setModalidad(e.target.value)} className={campo + " mt-1"}>
+          {MODALIDADES.map(([v, tx]) => (
+            <option key={v || "ninguna"} value={v}>{tx}</option>
+          ))}
+        </select>
+      </label>
 
       <label className="block text-xs text-neutral-500">
         Dispositivos o pantallas
