@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { leerCarrito, guardarCarrito } from "./carritoLocal";
 import { textoModalidad, modalidadVieja } from "@/lib/modalidades";
@@ -17,7 +16,6 @@ function textoPlan(plan) {
 }
 
 export default function AgregarCarrito({ producto, planes }) {
-  const router = useRouter();
 
   function agregar(e) {
     e.preventDefault();
@@ -66,7 +64,7 @@ export default function AgregarCarrito({ producto, planes }) {
       });
     }
     guardarCarrito(items);
-    toast.success("Agregado al carrito", { action: { label: "Ver carrito", onClick: () => router.push("/carrito") } });
+    window.dispatchEvent(new Event("carrito:abrir"));
   }
 
   return (
