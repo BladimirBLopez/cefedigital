@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
 import SubirFoto from "@/components/SubirFoto";
 import CamposProducto from "@/components/CamposProducto";
+import SelectorCategoria from "@/components/SelectorCategoria";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { editarProducto } from "../../actions";
@@ -100,6 +101,7 @@ export default async function EditarProducto({ params, searchParams }) {
 
           <section className={tarjeta}>
             <h2 className={titulo}>3. Detalles</h2>
+            <SelectorCategoria categorias={cats.map((c) => c.categoria)} actual={p.categoria || ""} />
             <label className={rotulo}>
               Descripción
               <textarea name="descripcion" rows={2} defaultValue={p.descripcion || ""} className={campo + " mt-1"} />
