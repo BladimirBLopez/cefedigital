@@ -1,15 +1,16 @@
-
 "use client";
 
 import { useState } from "react";
 import { MODALIDADES } from "@/lib/modalidades";
+import { textoDuracion } from "@/lib/duracion";
 
 const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-intenso";
 const rango = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+const DURACIONES = [3, 7, 14, 15, 30, 40, 45, 60, 90, 120, 180, 270, 365, 730];
 
 export default function FormPlan({ action, productoId }) {
   const [pant, setPant] = useState(1);
-  const [pag, setPag] = useState(1);
+  const [dias, setDias] = useState(30);
   const [precio, setPrecio] = useState("");
   const [costo, setCosto] = useState("");
   const [modalidad, setModalidad] = useState("completa");
@@ -42,10 +43,10 @@ export default function FormPlan({ action, productoId }) {
       </label>
 
       <label className="block text-xs text-neutral-500">
-        Meses de servicio
-        <select name="meses_pagados" value={pag} onChange={(e) => setPag(Number(e.target.value))} className={campo + " mt-1"}>
-          {[1, 2, 3, 4, 5, 6, 9, 12, 18, 24, 36].map((n) => (
-            <option key={n} value={n}>{n} {n === 1 ? "mes" : "meses"}</option>
+        Duración del servicio
+        <select name="duracion_dias" value={dias} onChange={(e) => setDias(Number(e.target.value))} className={campo + " mt-1"}>
+          {DURACIONES.map((n) => (
+            <option key={n} value={n}>{textoDuracion(n)}</option>
           ))}
         </select>
       </label>
@@ -62,8 +63,8 @@ export default function FormPlan({ action, productoId }) {
       </div>
 
       <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 text-sm">
-        <p className="font-semibold text-marino">{pant} {pant === 1 ? "pantalla" : "pantallas"} · {pag} {pag === 1 ? "mes" : "meses"} de servicio</p>
-        <p className="text-xs text-neutral-500">Vence a los {pag * 30} días de entregar.</p>
+        <p className="font-semibold text-marino">{pant} {pant === 1 ? "pantalla" : "pantallas"} · {textoDuracion(dias)} de servicio</p>
+        <p className="text-xs text-neutral-500">Vence a los {dias} días de entregar.</p>
         {ganancia !== null && (
           <p className={"text-sm font-semibold mt-1 " + (ganancia < 0 ? "text-red-600" : "text-marino")}>
             Ganancia: Bs {ganancia.toFixed(2)}

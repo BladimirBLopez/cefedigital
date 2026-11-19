@@ -7,6 +7,7 @@ import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { asegurarEsquema } from "@/lib/esquema";
 import { modalidadDeForm, normalizarModalidad, textoModalidad, compartidaDe } from "@/lib/modalidades";
+import { textoDuracion } from "@/lib/duracion";
 
 const ruta = (id) => `/admin/productos/${id}/planes`;
 
@@ -37,13 +38,15 @@ export async function agregarPlan(formData) {
   if (!Number.isInteger(pid)) redirect("/admin/productos");
 
   const pantallas = entero(formData.get("pantallas"), 1, 10);
-  const pagados = entero(formData.get("meses_pagados"), 1, 36);
+  const mesesForm = entero(formData.get("meses_pagados"), 1, 36);
+  const dias = entero(formData.get("duracion_dias"), 1, 1095) ?? (mesesForm ? mesesForm * 30 : null);
+  const pagados = dias ? Math.max(1, Math.round(dias / 30)) : null;
   const precio = dinero(formData.get("precio"));
   const costo = dinero(formData.get("costo"));
   const modal = modalidadDeForm(formData);
   const compartida = compartidaDe(modal);
 
-  if (!pantallas || !pagados) redirect(`${ruta(pid)}?error=datos`);
+  if (!pantallas || !dias) redirect(`${ruta(pid)}?error=datos`);
   if (precio === null || Number.isNaN(precio)) redirect(`${ruta(pid)}?error=precio`);
   if (Number.isNaN(costo)) redirect(`${ruta(pid)}?error=costo`);
 
@@ -51,7 +54,7 @@ export async function agregarPlan(formData) {
     select 1 from planes
     where producto_id = ${pid}
       and pantallas = ${pantallas}
-      and meses_pagados = ${pagados}
+      and duracion_dias = ${dias}
       and modalidad is not distinct from ${modal || null}::text
     limit 1`;
 
@@ -59,8 +62,8 @@ export async function agregarPlan(formData) {
 
   const perfil = pantallas === 1 ? "1 pantalla" : `${pantallas} pantallas`;
   const etiqueta = textoModalidad(modal);
-  const nombre = `${perfil} · ${pagados} ${pagados === 1 ? "mes" : "meses"}${etiqueta ? ` · ${etiqueta}` : ""}`;
-  const duracion = pagados * 30;
+  const nombre = `${perfil} · ${textoDuracion(dias)}${etiqueta ? ` · ${etiqueta}` : ""}`;
+  const duracion = dias;
   const orden = pantallas * 100 + pagados;
 
   await sql`
