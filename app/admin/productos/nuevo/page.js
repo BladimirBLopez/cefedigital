@@ -14,6 +14,7 @@ const titulo = "text-sm font-semibold text-marino";
 
 const ERRORES = {
   nombre: "Falta el nombre",
+  tipo: "Elige el tipo de producto",
   precio: "El precio no es válido",
   vence: "La fecha de vencimiento no es válida",
   duracion: "La duración debe ser un número de días (1 o más)",

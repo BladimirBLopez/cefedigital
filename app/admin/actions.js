@@ -44,8 +44,8 @@ function leerProducto(formData) {
   const descripcion = String(formData.get("descripcion") || "").trim() || null;
   const precio = Number(String(formData.get("precio") || "").replace(",", "."));
   const instrucciones = String(formData.get("instrucciones") || "").trim().slice(0, 2000) || null;
-  const tipoForm = String(formData.get("tipo") || "clave");
-  const tipo = ["clave", "cuenta", "recarga"].includes(tipoForm) ? tipoForm : "clave";
+  const tipoForm = String(formData.get("tipo") || "");
+  const tipo = ["clave", "cuenta", "recarga"].includes(tipoForm) ? tipoForm : "";
   const campoCliente =
     tipo === "recarga"
       ? String(formData.get("campo_cliente") || "").trim().slice(0, 60) || "Tu ID de jugador"
@@ -56,7 +56,8 @@ function leerProducto(formData) {
   const duracion = durTxt ? Number(durTxt) : null;
   let error = null;
   if (!nombre) error = "nombre";
-  else if (!Number.isFinite(precio) || precio < 0) error = "precio";
+  else if (!tipo) error = "tipo";
+  else if (!Number.isFinite(precio) || precio < 0 || (tipo !== "cuenta" && precio <= 0)) error = "precio";
   else if (venceTxt && !vence) error = "vence";
   else if (durTxt && (!Number.isInteger(duracion) || duracion < 1 || duracion > 3650)) error = "duracion";
   return { nombre, categoria, descripcion, precio, instrucciones, tipo, campoCliente, vence, duracion, error };
