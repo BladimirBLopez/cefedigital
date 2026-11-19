@@ -48,7 +48,12 @@ export default async function EditarProducto({ params, searchParams }) {
       ? await sql`select id, nombre, precio::float as precio, costo::float as costo, activo from planes where producto_id = ${id} order by orden, id`
       : [];
 
-  const cats = await sql`select distinct categoria from productos where categoria is not null order by 1`;
+  const cats = await sql`
+    select categoria from (
+      select nombre as categoria, orden from categorias
+      union all
+      select categoria, 9999 from productos where categoria is not null
+    ) t group by categoria order by min(orden), categoria`;
 
   return (
     <>

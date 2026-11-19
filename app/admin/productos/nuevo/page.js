@@ -29,7 +29,12 @@ const ERRORES = {
 export default async function NuevoProducto({ searchParams }) {
   await requireAdmin();
   const sp = await searchParams;
-  const cats = await sql`select distinct categoria from productos where categoria is not null order by 1`;
+  const cats = await sql`
+    select categoria from (
+      select nombre as categoria, orden from categorias
+      union all
+      select categoria, 9999 from productos where categoria is not null
+    ) t group by categoria order by min(orden), categoria`;
   return (
     <>
       <AdminNav />
