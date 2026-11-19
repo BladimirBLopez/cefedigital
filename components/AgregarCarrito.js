@@ -21,7 +21,15 @@ export default function AgregarCarrito({ producto, planes }) {
 
   function agregar(e) {
     e.preventDefault();
-    const f = new FormData(e.currentTarget.form);
+    const btn = e.currentTarget;
+    const cont = btn.form || btn.closest("[data-opciones]");
+    const f = new FormData(btn.form || undefined);
+    if (!btn.form && cont) {
+      cont.querySelectorAll("input[name], select[name], textarea[name]").forEach((el) => {
+        if ((el.type === "radio" || el.type === "checkbox") && !el.checked) return;
+        f.set(el.name, el.value);
+      });
+    }
     const hayPlanes = planes.length > 0;
     let plan = null;
     if (hayPlanes) {
