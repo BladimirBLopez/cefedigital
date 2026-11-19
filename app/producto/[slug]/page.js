@@ -24,7 +24,7 @@ export default async function Producto({ params, searchParams }) {
   if (!p) notFound();
   const esRecarga = p.tipo === "recarga";
   const max = 5;
-  const planes = await sql`select id, perfil, pantallas, meses_pagados, precio::float as precio, compartida, modalidad from planes where producto_id = ${p.id} and activo order by orden, id`;
+  const planes = await sql`select id, perfil, pantallas, meses_pagados, duracion_dias, precio::float as precio, compartida, modalidad from planes where producto_id = ${p.id} and activo order by orden, id`;
   const hayPlanes = planes.length > 0;
   const desde = hayPlanes ? Math.min(...planes.map((x) => x.precio)) : p.precio;
   const grupos = [];

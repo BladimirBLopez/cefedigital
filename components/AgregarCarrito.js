@@ -4,9 +4,17 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { leerCarrito, guardarCarrito } from "./carritoLocal";
 import { textoModalidad, modalidadVieja } from "@/lib/modalidades";
+import { diasDe, textoDuracion } from "@/lib/duracion";
 
 const MAX_ITEMS = 10;
-const mes = (n) => `${n} ${n === 1 ? "mes" : "meses"}`;
+function textoPlan(plan) {
+  const n = Number(plan.pantallas) || 1;
+  return [
+    n > 1 ? `${n} pantallas` : "",
+    textoDuracion(diasDe(plan)),
+    textoModalidad(plan.modalidad || modalidadVieja(plan.compartida)),
+  ].filter(Boolean).join(" · ");
+}
 
 export default function AgregarCarrito({ producto, planes }) {
   const router = useRouter();
@@ -41,7 +49,7 @@ export default function AgregarCarrito({ producto, planes }) {
         imagen: producto.imagen || null,
         plan_id: planId,
         plan_texto: plan
-          ? `${plan.perfil} · ${plan.pantallas} ${plan.pantallas === 1 ? "pantalla" : "pantallas"} · ${mes(plan.meses_pagados)}${textoModalidad(plan.modalidad || modalidadVieja(plan.compartida)) ? " · " + textoModalidad(plan.modalidad || modalidadVieja(plan.compartida)) : ""}`
+          ? textoPlan(plan)
           : null,
         precio: plan ? plan.precio : producto.precio,
         cantidad,
