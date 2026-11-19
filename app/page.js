@@ -4,7 +4,7 @@ import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import { optimizar } from "@/lib/imagen";
-import { FiZap, FiShield, FiMessageCircle, FiGrid, FiTv, FiMusic, FiCpu, FiCamera, FiBook, FiBookOpen, FiPenTool, FiBriefcase, FiHeart } from "react-icons/fi";
+import { FiZap, FiShield, FiMessageCircle, FiGrid, FiTv, FiMusic, FiCpu, FiCamera, FiBook, FiBookOpen, FiPenTool, FiBriefcase, FiHeart, FiLock } from "react-icons/fi";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,12 @@ export default async function Home({ searchParams }) {
   const POR = 24;
   const pag = Math.max(1, Math.min(500, parseInt(sp?.pag, 10) || 1));
   const aj = await obtenerAjustes();
-  const cats = await sql`select distinct categoria from productos where activo and categoria is not null order by 1`;
+  const cats = await sql`
+    select p.categoria from productos p
+    left join categorias c on c.nombre = p.categoria
+    where p.activo and p.categoria is not null
+    group by p.categoria
+    order by min(coalesce(c.orden, 9999)), p.categoria`;
   const prods = await sql`
     select p.slug, p.nombre, p.categoria, p.imagen_url,
       coalesce((select min(pl.precio) from planes pl where pl.producto_id = p.id and pl.activo), p.precio)::float as precio,
@@ -29,6 +34,7 @@ export default async function Home({ searchParams }) {
   const lista = prods.slice(0, POR);
   const icono = (c) => {
     const x = String(c || "").toLowerCase();
+    if (x.includes("+18") || x.includes("contenido")) return FiLock;
     if (x.includes("stream") || x.includes("video") && x.includes("entret")) return FiTv;
     if (x.includes("music") || x.includes("músic") || x.includes("audio") && !x.includes("libro")) return FiMusic;
     if (x.includes("inteligencia")) return FiCpu;
@@ -75,14 +81,27 @@ export default async function Home({ searchParams }) {
         </form>
 
         {cats.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto mt-5 pb-1">
-            <Link href="/" className={chip(!cat)}><FiGrid className="h-4 w-4" />Todos</Link>
-            {cats.map((c) => (
-              <Link key={c.categoria} href={`/?cat=${encodeURIComponent(c.categoria)}`} className={chip(cat === c.categoria)}>
-                {(() => { const I = icono(c.categoria); return <I className="h-4 w-4" />; })()}{c.categoria}
-              </Link>
-            ))}
-          </div>
+          <nav aria-label="Categorías" className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-2">
+            {[{ categoria: null }, ...cats].map((c) => {
+              const activa = c.categoria ? cat === c.categoria : !cat;
+              const I = c.categoria ? icono(c.categoria) : FiGrid;
+              return (
+                <Link
+                  key={c.categoria || "todos"}
+                  href={c.categoria ? `/?cat=${encodeURIComponent(c.categoria)}` : "/"}
+                  aria-current={activa ? "true" : undefined}
+                  className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
+                >
+                  <span className={"flex h-14 w-14 items-center justify-center rounded-full border transition " + (activa ? "border-intenso bg-intenso text-white shadow" : "border-neutral-200 bg-white text-marino")}>
+                    <I className="h-6 w-6" />
+                  </span>
+                  <span className={"line-clamp-2 text-[11px] leading-tight " + (activa ? "font-semibold text-intenso" : "text-neutral-600")}>
+                    {c.categoria || "Todos"}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
         )}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
