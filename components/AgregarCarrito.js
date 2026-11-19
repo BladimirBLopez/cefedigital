@@ -70,7 +70,7 @@ export default function AgregarCarrito({ producto, planes }) {
   }
 
   return (
-    <button type="submit" onClick={agregar} className="w-full rounded-xl border border-intenso text-intenso hover:bg-intenso/10 font-semibold py-3 transition">
+    <button type="submit" onClick={agregar} className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3 transition">
       Agregar al carrito
     </button>
   );
