@@ -4,7 +4,7 @@ import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import { optimizar } from "@/lib/imagen";
-import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
+import { FiZap, FiShield, FiMessageCircle, FiGrid, FiTv, FiMusic, FiCpu, FiCamera, FiBook, FiBookOpen, FiPenTool, FiBriefcase, FiHeart } from "react-icons/fi";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,8 @@ export default async function Home({ searchParams }) {
   const sp = await searchParams;
   const cat = sp?.cat ? String(sp.cat) : null;
   const q = sp?.q ? String(sp.q).trim().slice(0, 40) : null;
+  const POR = 24;
+  const pag = Math.max(1, Math.min(500, parseInt(sp?.pag, 10) || 1));
   const aj = await obtenerAjustes();
   const cats = await sql`select distinct categoria from productos where activo and categoria is not null order by 1`;
   const prods = await sql`
@@ -21,9 +23,34 @@ export default async function Home({ searchParams }) {
     from productos p
     where p.activo and (${cat}::text is null or p.categoria = ${cat})
       and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
-    order by p.id desc`;
+    order by p.id desc
+    limit ${POR + 1} offset ${(pag - 1) * POR}`;
+  const hayMas = prods.length > POR;
+  const lista = prods.slice(0, POR);
+  const icono = (c) => {
+    const x = String(c || "").toLowerCase();
+    if (x.includes("stream") || x.includes("video") && x.includes("entret")) return FiTv;
+    if (x.includes("music") || x.includes("músic") || x.includes("audio") && !x.includes("libro")) return FiMusic;
+    if (x.includes("inteligencia")) return FiCpu;
+    if (x.includes("foto")) return FiCamera;
+    if (x.includes("libro")) return FiBookOpen;
+    if (x.includes("educ") || x.includes("idioma")) return FiBook;
+    if (x.includes("vpn") || x.includes("antivirus") || x.includes("segur")) return FiShield;
+    if (x.includes("dise")) return FiPenTool;
+    if (x.includes("product") || x.includes("negocio")) return FiBriefcase;
+    if (x.includes("bienestar") || x.includes("fitness")) return FiHeart;
+    return FiGrid;
+  };
+  const href = (n) => {
+    const s = new URLSearchParams();
+    if (cat) s.set("cat", cat);
+    if (q) s.set("q", q);
+    if (n > 1) s.set("pag", String(n));
+    const x = s.toString();
+    return "/" + (x ? "?" + x : "");
+  };
   const chip = (activo) =>
-    "whitespace-nowrap rounded-full px-4 py-1.5 text-sm border " +
+    "whitespace-nowrap inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border transition " +
     (activo ? "bg-intenso text-white border-intenso" : "border-neutral-300 text-marino");
 
   return (
@@ -49,29 +76,41 @@ export default async function Home({ searchParams }) {
 
         {cats.length > 0 && (
           <div className="flex gap-2 overflow-x-auto mt-5 pb-1">
-            <Link href="/" className={chip(!cat)}>Todos</Link>
+            <Link href="/" className={chip(!cat)}><FiGrid className="h-4 w-4" />Todos</Link>
             {cats.map((c) => (
               <Link key={c.categoria} href={`/?cat=${encodeURIComponent(c.categoria)}`} className={chip(cat === c.categoria)}>
-                {c.categoria}
+                {(() => { const I = icono(c.categoria); return <I className="h-4 w-4" />; })()}{c.categoria}
               </Link>
             ))}
           </div>
         )}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
-          {prods.length === 0 && <p className="col-span-full text-sm text-neutral-500">{q ? "No encontramos productos con ese nombre." : "Pronto habrá productos."}</p>}
-          {prods.map((p) => (
+          {lista.length === 0 && <p className="col-span-full text-sm text-neutral-500">{q ? "No encontramos productos con ese nombre." : "Pronto habrá productos."}</p>}
+          {lista.map((p) => (
             <Link key={p.slug} href={`/producto/${p.slug}`} className="group rounded-2xl bg-white border border-neutral-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition p-3 flex flex-col">
-              {p.imagen_url ? <img src={optimizar(p.imagen_url, 500)} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" /> : <div className="w-full aspect-square rounded-xl mb-3 bg-gradient-to-br from-intenso/10 to-turquesa/20" />}
+              {p.imagen_url ? <img src={optimizar(p.imagen_url, 500)} alt={p.nombre} loading="lazy" className="w-full aspect-square object-cover rounded-xl mb-3" /> : (() => { const I = icono(p.categoria); return <div className="w-full aspect-square rounded-xl mb-3 bg-gradient-to-br from-intenso/10 to-turquesa/20 flex items-center justify-center"><I className="h-10 w-10 text-intenso/40" /></div>; })()}
               <span className="self-start rounded-full bg-turquesa/25 text-marino text-[11px] font-medium px-2 py-0.5">{p.categoria || "Digital"}</span>
               <p className="font-medium mt-1">{p.nombre}</p>
               <p className="text-lg font-bold text-intenso mt-auto pt-3">{p.con_planes && <span className="text-xs font-medium text-neutral-500">Desde </span>}Bs {p.precio.toFixed(2)}</p>
-              <p className={"mt-2 rounded-xl bg-intenso group-hover:bg-marino text-white text-center text-sm font-semibold py-2 transition"}>
-                Comprar
+              <p className="mt-2 text-xs font-semibold text-intenso group-hover:underline">
+                Ver opciones →
               </p>
             </Link>
           ))}
         </div>
+
+        {(pag > 1 || hayMas) && (
+          <nav className="mt-6 flex items-center justify-between gap-3 text-sm">
+            {pag > 1 ? (
+              <Link href={href(pag - 1)} className="rounded-xl border border-neutral-300 px-4 py-2 font-medium text-marino hover:border-intenso">← Anterior</Link>
+            ) : <span />}
+            <span className="text-xs text-neutral-500">Página {pag}</span>
+            {hayMas ? (
+              <Link href={href(pag + 1)} className="rounded-xl bg-intenso hover:bg-marino px-4 py-2 font-semibold text-white transition">Siguiente →</Link>
+            ) : <span />}
+          </nav>
+        )}
       </main>
       <TiendaFooter nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
     </>
