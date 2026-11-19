@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
 import SubirFoto from "@/components/SubirFoto";
 import CamposProducto from "@/components/CamposProducto";
+import SelectorCategoria from "@/components/SelectorCategoria";
+import { sql } from "@/lib/db";
 import { crearProducto } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,7 @@ const ERRORES = {
 export default async function NuevoProducto({ searchParams }) {
   await requireAdmin();
   const sp = await searchParams;
+  const cats = await sql`select distinct categoria from productos where categoria is not null order by 1`;
   return (
     <>
       <AdminNav />
@@ -55,6 +58,7 @@ export default async function NuevoProducto({ searchParams }) {
 
           <section className={tarjeta}>
             <h2 className={titulo}>3. Detalles</h2>
+            <SelectorCategoria categorias={cats.map((c) => c.categoria)} />
             <label className={rotulo}>
               Descripción corta
               <textarea name="descripcion" rows={2} className={campo + " mt-1"} />

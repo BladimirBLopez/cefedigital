@@ -73,7 +73,7 @@ export async function crearProducto(formData) {
   await asegurarEsquema();
   const p = leerProducto(formData);
   if (p.error) redirect(`/admin/productos/nuevo?error=${p.error}`);
-  p.categoria = CATEGORIAS[p.tipo];
+  p.categoria = (await unificarCategoria((p.categoria || "").slice(0, 40))) || CATEGORIAS[p.tipo];
 
   const planesNuevos = [];
   let precioProducto = p.precio;
@@ -212,7 +212,9 @@ export async function editarProducto(formData) {
   const base = `/admin/productos/${id}`;
   const p = leerProducto(formData);
   if (p.error) redirect(`${base}?error=${p.error}`);
-  p.categoria = CATEGORIAS[p.tipo];
+  p.categoria = formData.has("categoria")
+    ? (await unificarCategoria((p.categoria || "").slice(0, 40), id)) || CATEGORIAS[p.tipo]
+    : (await sql`select categoria from productos where id = ${id}`)[0]?.categoria || CATEGORIAS[p.tipo];
 
   const actual = String(formData.get("imagen_url") || "").trim();
   if (actual && !/^https:\/\//i.test(actual)) redirect(`${base}?error=imagen`);
