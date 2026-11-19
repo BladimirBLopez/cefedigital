@@ -86,11 +86,17 @@ export default async function Producto({ params, searchParams }) {
             {sp?.error === "dato" && <p className="text-sm text-red-600">Falta: {p.campo_cliente || "el dato de tu cuenta"}</p>}
             {sp?.error === "plan" && <p className="text-sm text-red-600">Elige un plan para continuar</p>}
             {sp?.error === "limite" && <p className="text-sm text-red-600">Hiciste muchos pedidos seguidos. Espera un rato o escríbenos por WhatsApp.</p>}
-            <div className="sticky bottom-0 z-10 -mx-5 -mb-5 rounded-b-2xl border-t border-neutral-200 bg-white/95 px-5 py-3 backdrop-blur"><AgregarCarrito producto={{ id: Number(p.id), slug: p.slug, nombre: p.nombre, imagen: p.imagen_url, precio: p.precio, esRecarga, campo_cliente: p.campo_cliente }} planes={planes} /></div>
+            
             
         </div>
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto max-w-3xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <AgregarCarrito producto={{ id: Number(p.id), slug: p.slug, nombre: p.nombre, imagen: p.imagen_url, precio: p.precio, esRecarga, campo_cliente: p.campo_cliente }} planes={planes} />
+        </div>
+      </div>
       </main>
       <TiendaFooter nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
+      <div className="h-24" aria-hidden="true" />
     </>
   );
 }

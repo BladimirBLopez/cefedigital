@@ -22,7 +22,7 @@ export default function AgregarCarrito({ producto, planes }) {
   function agregar(e) {
     e.preventDefault();
     const btn = e.currentTarget;
-    const cont = btn.form || btn.closest("[data-opciones]");
+    const cont = btn.form || btn.closest("[data-opciones]") || document.querySelector("[data-opciones]");
     const f = new FormData(btn.form || undefined);
     if (!btn.form && cont) {
       cont.querySelectorAll("input[name], select[name], textarea[name]").forEach((el) => {
