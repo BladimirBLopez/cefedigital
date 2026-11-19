@@ -8,7 +8,7 @@ import CamposProducto from "@/components/CamposProducto";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { editarProducto } from "../../actions";
-import BorrarProducto from "@/components/BorrarProducto";
+import BorrarSiLibre from "@/components/BorrarSiLibre";
 
 export const dynamic = "force-dynamic";
 
@@ -138,7 +138,7 @@ export default async function EditarProducto({ params, searchParams }) {
           </Link>
         )}
         <div className="mt-6 flex justify-end">
-          <BorrarProducto id={p.id} nombre={p.nombre} />
+          <BorrarSiLibre id={p.id} nombre={p.nombre} />
         </div>
       </main>
     </>
