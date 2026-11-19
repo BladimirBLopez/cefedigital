@@ -20,6 +20,7 @@ export default function AgregarCarrito({ producto, planes }) {
   const router = useRouter();
 
   function agregar(e) {
+    e.preventDefault();
     const f = new FormData(e.currentTarget.form);
     const hayPlanes = planes.length > 0;
     let plan = null;
@@ -61,7 +62,7 @@ export default function AgregarCarrito({ producto, planes }) {
   }
 
   return (
-    <button type="button" onClick={agregar} className="w-full rounded-xl border border-intenso text-intenso hover:bg-intenso/10 font-semibold py-3 transition">
+    <button type="submit" onClick={agregar} className="w-full rounded-xl border border-intenso text-intenso hover:bg-intenso/10 font-semibold py-3 transition">
       Agregar al carrito
     </button>
   );

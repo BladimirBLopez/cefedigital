@@ -12,7 +12,7 @@ const campo = "w-full rounded-xl bg-white border border-neutral-300 px-4 py-3 ou
 
 const ERRORES = {
   vacio: "Tu carrito está vacío.",
-  datos: "Revisa tu nombre y tu número de WhatsApp.",
+  datos: "Revisa tu número de WhatsApp.",
   invalido: "Algún producto ya no está disponible. Quítalo o vacía el carrito y vuelve a intentar.",
   dato: "Falta un dato de cuenta en uno de los productos.",
   limite: "Hiciste muchos pedidos seguidos. Espera un rato o escríbenos por WhatsApp.",
@@ -121,11 +121,7 @@ export default function CarritoCliente({ error }) {
 
       <form action={crearPedidoCarrito} className="mt-5 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
         <input type="hidden" name="items" value={JSON.stringify(payload)} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label className="block text-xs text-neutral-500">
-            Tu nombre
-            <input name="cliente_nombre" required maxLength={80} autoComplete="name" placeholder="Nombre completo" className={campo + " mt-1"} />
-          </label>
+        <div>
           <label className="block text-xs text-neutral-500">
             Tu WhatsApp
             <input name="cliente_whatsapp" type="tel" required minLength={8} maxLength={15} inputMode="tel" autoComplete="tel" placeholder="Ej. 71234567" className={campo + " mt-1"} />

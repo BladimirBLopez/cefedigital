@@ -7,22 +7,17 @@ import { sql } from "@/lib/db";
 import { ipCliente, contar, anotar } from "@/lib/limite";
 
 function leerCliente(formData) {
-  const nombre = String(formData.get("cliente_nombre") || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .slice(0, 80);
-
   let whatsapp = String(formData.get("cliente_whatsapp") || "")
     .replace(/\D/g, "")
     .slice(0, 15);
 
   if (whatsapp.length === 8) whatsapp = "591" + whatsapp;
 
-  if (nombre.length < 2 || whatsapp.length < 8 || whatsapp.length > 15) {
+  if (whatsapp.length < 8 || whatsapp.length > 15) {
     return null;
   }
 
-  return { nombre, whatsapp };
+  return { nombre: "+" + whatsapp, whatsapp };
 }
 
 async function guardarPedido({ cliente, codigo, total, lineas }) {

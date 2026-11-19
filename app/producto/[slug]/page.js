@@ -6,7 +6,6 @@ import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import { optimizar } from "@/lib/imagen";
 import { FiZap, FiShield, FiMessageCircle } from "react-icons/fi";
-import { crearPedido } from "@/app/tienda-actions";
 import SelectorPlan from "@/components/SelectorPlan";
 import AgregarCarrito from "@/components/AgregarCarrito";
 
@@ -52,19 +51,9 @@ export default async function Producto({ params, searchParams }) {
           <p className="text-xs text-neutral-500 mt-3">Entrega después de confirmar tu pago</p>
         </div>
 
-        <form action={crearPedido} className="mt-6 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
-            <h2 className="text-lg font-bold">Hacer mi pedido</h2>
-            <p className="text-xs text-neutral-500">Al hacer el pedido te damos un código y las instrucciones de pago.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="block text-xs text-neutral-500">
-                Tu nombre
-                <input name="cliente_nombre" required maxLength={80} autoComplete="name" placeholder="Nombre completo" className={campo + " mt-1"} />
-              </label>
-              <label className="block text-xs text-neutral-500">
-                Tu WhatsApp
-                <input name="cliente_whatsapp" type="tel" required minLength={8} maxLength={15} inputMode="tel" autoComplete="tel" placeholder="Ej. 71234567" className={campo + " mt-1"} />
-              </label>
-            </div>
+        <form className="mt-6 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
+            <h2 className="text-lg font-bold">Elige tu opción</h2>
+            <p className="text-xs text-neutral-500">Agrega al carrito y completa tu pedido allí con tu WhatsApp.</p>
             <input type="hidden" name="producto_id" value={p.id} />
             <input type="hidden" name="slug" value={p.slug} />
             {hayPlanes && <SelectorPlan planes={planes} />}
@@ -81,12 +70,12 @@ export default async function Producto({ params, searchParams }) {
             </select>
             )}
             {sp?.error === "fallo" && <p className="text-sm text-red-600">No se pudo registrar tu pedido. Intenta nuevamente o contáctanos por WhatsApp.</p>}
-            {sp?.error === "datos" && <p className="text-sm text-red-600">Escribe tu nombre y un número de WhatsApp válido.</p>}
+            
             {sp?.error === "dato" && <p className="text-sm text-red-600">Falta: {p.campo_cliente || "el dato de tu cuenta"}</p>}
             {sp?.error === "plan" && <p className="text-sm text-red-600">Elige un plan para continuar</p>}
             {sp?.error === "limite" && <p className="text-sm text-red-600">Hiciste muchos pedidos seguidos. Espera un rato o escríbenos por WhatsApp.</p>}
             <AgregarCarrito producto={{ id: Number(p.id), slug: p.slug, nombre: p.nombre, imagen: p.imagen_url, precio: p.precio, esRecarga, campo_cliente: p.campo_cliente }} planes={planes} />
-            <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3 transition">Pedir ahora</button>
+            
         </form>
       </main>
       <TiendaFooter nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />

@@ -61,7 +61,7 @@ export default async function Vencimientos({ searchParams }) {
               <ul className="space-y-3">
                 {lista.map((f) => {
                   const msg = encodeURIComponent(
-                    `Hola ${f.cliente}, tu servicio ${f.producto} (pedido ${f.codigo}) ${f.dias < 0 ? "venció" : "vence"} el ${fecha(f.vence_en)}. ¿Quieres renovarlo? Respóndenos por aquí y te ayudamos.`
+                    `Hola, tu servicio ${f.producto} (pedido ${f.codigo}) ${f.dias < 0 ? "venció" : "vence"} el ${fecha(f.vence_en)}. ¿Quieres renovarlo? Respóndenos por aquí y te ayudamos.`
                   );
                   return (
                     <li key={f.id} className="rounded-2xl bg-white border border-neutral-200 p-4">

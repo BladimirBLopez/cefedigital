@@ -105,7 +105,7 @@ export default async function Pedidos({ searchParams }) {
         <ul className="space-y-3">
           {pedidos.length === 0 && <li className="text-sm text-neutral-500">{q || estado ? "No se encontró ningún pedido." : "Todavía no hay pedidos."}</li>}
           {pedidos.map((p) => {
-            const mensaje = encodeURIComponent(`Hola ${p.nombre}, te escribo por tu pedido ${p.codigo}: ${p.detalle}.`);
+            const mensaje = encodeURIComponent(`Hola, te escribo por tu pedido ${p.codigo}: ${p.detalle}.`);
             return (
               <li key={p.id} className="rounded-2xl bg-white border border-neutral-200 p-4">
                 <div className="flex items-start justify-between gap-3">
