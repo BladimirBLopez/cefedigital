@@ -169,7 +169,7 @@ export default async function Productos({ searchParams }) {
                 <div className="h-16 w-16 shrink-0 rounded-xl bg-neutral-100 overflow-hidden flex items-center justify-center text-neutral-400 text-xs">
                   {p.imagen_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imagen_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    <img src={p.imagen_url} alt="" loading="lazy" className="h-full w-full object-contain" />
                   ) : (
                     "Sin foto"
                   )}

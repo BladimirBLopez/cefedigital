@@ -13,7 +13,9 @@ export default function TarjetaProducto({ p, fila = false }) {
       }
     >
       {p.imagen_url ? (
-        <img src={optimizar(p.imagen_url, 500)} alt={p.nombre} loading="lazy" className="aspect-square w-full object-cover" />
+        <div className="relative aspect-square w-full overflow-hidden bg-neutral-50">
+          <img src={optimizar(p.imagen_url, 500)} alt={p.nombre} loading="lazy" className="absolute inset-0 h-full w-full object-contain" />
+        </div>
       ) : (
         <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-intenso/10 to-turquesa/20">
           <I className="h-10 w-10 text-intenso/40" />

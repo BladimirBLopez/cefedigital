@@ -40,7 +40,7 @@ export default function SubirFoto({ actual }) {
       <div className="h-20 w-20 shrink-0 rounded-xl bg-neutral-100 border border-neutral-200 overflow-hidden flex items-center justify-center text-xs text-neutral-400">
         {vista ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={vista} alt="" className="h-full w-full object-cover" />
+          <img src={vista} alt="" className="h-full w-full object-contain" />
         ) : (
           "Sin foto"
         )}
