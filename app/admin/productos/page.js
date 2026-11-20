@@ -8,6 +8,7 @@ import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { crearProducto } from "../actions";
 import Interruptor from "@/components/Interruptor";
+import EstrellaDestacado from "@/components/EstrellaDestacado";
 import SwitchVenta from "@/components/SwitchVenta";
 
 
@@ -36,7 +37,7 @@ export default async function Productos({ searchParams }) {
   const cats = String(sp?.cat || "").split("|").map((c) => c.trim()).filter(Boolean);
 
   const todos = await sql`
-    select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.vence::text as vence,
+    select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.destacado, p.vence::text as vence,
       p.precio::float as precio, p.activo
     from productos p order by p.id desc`;
 
@@ -192,7 +193,10 @@ export default async function Productos({ searchParams }) {
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <Link href={`/admin/productos/${p.id}`} className="rounded-full border border-marino px-3 py-1 text-xs font-semibold text-marino hover:bg-marino hover:text-white">Editar</Link>
-                  <Interruptor id={p.id} activo={p.activo} />
+                  <div className="flex items-center gap-2">
+                    <EstrellaDestacado id={p.id} destacado={p.destacado} />
+                    <Interruptor id={p.id} activo={p.activo} />
+                  </div>
                   
                 </div>
               </li>

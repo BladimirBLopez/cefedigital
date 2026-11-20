@@ -180,6 +180,30 @@ export async function crearProducto(formData) {
   redirect("/admin/productos?aviso=producto_creado");
 }
 
+export async function cambiarDestacado(formData) {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return { ok: false };
+
+  const r = await sql`
+    update productos set destacado = not destacado where id = ${id}
+    returning nombre, destacado`;
+
+  if (!r[0]) return { ok: false };
+
+  await anotar(
+    "editar",
+    "producto",
+    id,
+    `${r[0].destacado ? "Marcó como destacado" : "Quitó de destacados"} "${r[0].nombre}"`
+  );
+
+  revalidatePath("/");
+  revalidatePath("/admin/productos");
+
+  return { ok: true, destacado: r[0].destacado };
+}
+
 export async function cambiarActivo(formData) {
   await requireAdmin();
   const id = Number(formData.get("id"));
