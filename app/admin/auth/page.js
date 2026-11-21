@@ -25,6 +25,17 @@ export default async function PaginaAuth({ searchParams }) {
   }
   const pendientes = crear.length + agregar.length;
 
+  const bases = [...new Set([String(process.env.BETTER_AUTH_URL || "").replace(/\/$/, ""), "https://www.cefedigital.shop"].filter(Boolean))];
+  const pruebas = [];
+  for (const b of bases) {
+    try {
+      const r = await auth.handler(new Request(b + "/api/auth/ok"));
+      pruebas.push([b, r.status + " " + (await r.text()).slice(0, 160)]);
+    } catch (e) {
+      pruebas.push([b, "ERROR: " + String(e?.message || e).slice(0, 240)]);
+    }
+  }
+
   return (
     <>
       <AdminNav />
@@ -58,6 +69,12 @@ export default async function PaginaAuth({ searchParams }) {
               <button className="rounded-xl bg-intenso px-5 py-2.5 text-sm font-semibold text-white hover:bg-marino">Crear tablas</button>
             </form>
           )}
+        </section>
+        <section className={caja}>
+          <h2 className="mb-2 text-sm font-semibold text-marino">Prueba de la ruta /api/auth/ok</h2>
+          {pruebas.map(([t, r]) => (
+            <p key={t} className="break-all text-xs"><span className="font-semibold">{t}:</span> {r}</p>
+          ))}
         </section>
       </main>
     </>
