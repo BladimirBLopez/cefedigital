@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { MODALIDADES } from "@/lib/modalidades";
+import { textoDuracion } from "@/lib/duracion";
 
 const PANT = [1, 2, 3, 4, 5, 6, 7, 8];
-const MESES = [1, 2, 3, 6, 12];
+const ATAJOS = [7, 15, 30, 60, 90, 180, 365];
 const campo =
   "h-11 w-full min-w-0 rounded-lg bg-neutral-100 border border-neutral-300 px-2 text-sm outline-none focus:border-intenso";
-const etq = (m) => `${m} ${m === 1 ? "mes" : "meses"}`;
 const num = (v) => {
   const n = Number(String(v ?? "").replace(",", "."));
   return String(v ?? "").trim() !== "" && Number.isFinite(n) && n >= 0 ? n : null;
@@ -15,7 +15,7 @@ const num = (v) => {
 const cols = "grid grid-cols-[4.5rem_1fr_1fr_1.5rem] gap-2 items-center";
 
 export default function TarifasCuenta() {
-  const [filas, setFilas] = useState([{ id: 1, pant: 1, meses: 1, precio: "", costo: "", modalidad: "completa" }]);
+  const [filas, setFilas] = useState([{ id: 1, pant: 1, dias: "30", precio: "", costo: "", modalidad: "completa" }]);
   const [verCostos, setVerCostos] = useState(false);
 
   const cambiar = (id, k, v) => setFilas((fs) => fs.map((f) => (f.id === id ? { ...f, [k]: v } : f)));
@@ -23,19 +23,15 @@ export default function TarifasCuenta() {
   const agregar = () =>
     setFilas((fs) => {
       const u = fs[fs.length - 1];
-      const sig = MESES[MESES.indexOf(u.meses) + 1];
-      const nueva = sig
-        ? { pant: u.pant, meses: sig }
-        : { pant: Math.min(u.pant + 1, PANT[PANT.length - 1]), meses: 1 };
-      return [...fs, { id: Date.now(), ...nueva, precio: "", costo: "", modalidad: "completa" }];
+      return [...fs, { id: Date.now(), pant: u.pant, dias: "30", precio: "", costo: "", modalidad: "completa" }];
     });
 
   const cuenta = {};
   filas.forEach((f) => {
-    const c = `${f.pant}-${f.meses}-${f.modalidad}`;
+    const c = `${f.pant}-${f.dias}-${f.modalidad}`;
     cuenta[c] = (cuenta[c] || 0) + 1;
   });
-  const repetida = (f) => cuenta[`${f.pant}-${f.meses}-${f.modalidad}`] > 1;
+  const repetida = (f) => cuenta[`${f.pant}-${f.dias}-${f.modalidad}`] > 1;
   const precios = filas.map((f) => num(f.precio)).filter((n) => n !== null);
   const minimo = precios.length ? Math.min(...precios) : 0;
 
@@ -52,7 +48,7 @@ export default function TarifasCuenta() {
 
       <div className={cols + " text-[11px] text-neutral-500"}>
         <span>Pantallas</span>
-        <span>Duración</span>
+        <span>Días</span>
         <span>Precio (Bs)</span>
         <span></span>
       </div>
@@ -71,17 +67,15 @@ export default function TarifasCuenta() {
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
-            <select
-              name="plan_meses"
-              value={f.meses}
-              onChange={(e) => cambiar(f.id, "meses", Number(e.target.value))}
-              aria-label="Duración"
+            <input
+              name="plan_dias"
+              inputMode="numeric"
+              value={f.dias}
+              onChange={(e) => cambiar(f.id, "dias", e.target.value.replace(/\D/g, "").slice(0, 4))}
+              aria-label="Duración en días"
+              placeholder="30"
               className={campo + (repetida(f) ? " !border-red-400" : "")}
-            >
-              {MESES.map((m) => (
-                <option key={m} value={m}>{etq(m)}</option>
-              ))}
-            </select>
+            />
             <input
               name="plan_precio"
               inputMode="decimal"
@@ -103,6 +97,16 @@ export default function TarifasCuenta() {
             ) : (
               <span></span>
             )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pl-1">
+            {ATAJOS.map((d) => (
+              <button key={d} type="button" onClick={() => cambiar(f.id, "dias", String(d))}
+                className={"rounded-full border px-2.5 py-1 text-[11px] " + (String(d) === String(f.dias) ? "border-intenso bg-intenso text-white" : "border-neutral-300 text-neutral-600")}>
+                {d}
+              </button>
+            ))}
+            <span className="text-[11px] text-neutral-500">{textoDuracion(f.dias) ? "Cliente verá: " + textoDuracion(f.dias) : ""}</span>
           </div>
 
           <select

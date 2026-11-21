@@ -1,6 +1,7 @@
 "use server";
 
 import { normalizarModalidad, textoModalidad, compartidaDe } from "@/lib/modalidades";
+import { textoDuracion } from "@/lib/duracion";
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -86,15 +87,15 @@ export async function crearProducto(formData) {
       return Number.isFinite(n) && n >= 0 ? n : NaN;
     };
     const pants = formData.getAll("plan_pant").map(Number);
-    const mesesF = formData.getAll("plan_meses").map(Number);
+    const diasF = formData.getAll("plan_dias").map(Number);
     const preciosF = formData.getAll("plan_precio");
     const costosF = formData.getAll("plan_costo");
     const modalidadesF = formData.getAll("plan_modalidad");
     const vistos = new Set();
     for (let i = 0; i < pants.length; i++) {
       const pant = pants[i];
-      const m = mesesF[i];
-      if (!okInt(pant, 1, 10) || !okInt(m, 1, 36)) continue;
+      const m = diasF[i];
+      if (!okInt(pant, 1, 10) || !okInt(m, 1, 3650)) continue;
       const pr = dinero(preciosF[i]);
       const co = dinero(costosF[i]);
       const modalidad = normalizarModalidad(modalidadesF[i]);
@@ -147,7 +148,7 @@ export async function crearProducto(formData) {
     try {
       for (const x of planesNuevos) {
         const etiquetaMod = textoModalidad(x.modalidad);
-        const nombrePlan = `${x.perfil} · ${x.m} ${x.m === 1 ? "mes" : "meses"}${etiquetaMod ? ` · ${etiquetaMod}` : ""}`;
+        const nombrePlan = `${x.perfil} · ${textoDuracion(x.m)}${etiquetaMod ? ` · ${etiquetaMod}` : ""}`;
         await sql`
           insert into planes (
             producto_id, perfil, pantallas, meses_pagados, meses_gratis,
@@ -155,8 +156,8 @@ export async function crearProducto(formData) {
           )
           values (
             ${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0},
-            ${x.m * 30}, ${nombrePlan}, ${x.costo}, ${x.precio},
-            ${x.compartida}, ${x.modalidad || null}, true, ${x.pant * 100 + x.m}
+            ${x.m}, ${nombrePlan}, ${x.costo}, ${x.precio},
+            ${x.compartida}, ${x.modalidad || null}, true, ${x.pant * 1000 + x.m}
           )`;
       }
     } catch (e) {
