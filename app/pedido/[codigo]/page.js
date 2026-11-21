@@ -6,6 +6,7 @@ import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import VaciarCarrito from "@/components/VaciarCarrito";
 import PagoPedido from "@/components/PagoPedido";
+import { FiMessageCircle } from "react-icons/fi";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false } };
@@ -44,6 +45,13 @@ export default async function Pedido({ params, searchParams }) {
     `Hola, hice el pedido ${ped.codigo} por Bs ${ped.total.toFixed(2)}. Te envío mi comprobante de pago.`
   );
 
+  const lineas = items
+    .map((i) => `${i.cantidad} x ${i.nombre}${i.plan_nombre ? " · " + i.plan_nombre : ""}${i.dato_cliente ? " [ID: " + i.dato_cliente + "]" : ""}`)
+    .join("\n");
+  const msgComprobante = encodeURIComponent(
+    `Hola, mi pago del pedido ${ped.codigo} fue confirmado. Quiero coordinar la entrega.\n\n${lineas}\n\nTotal: Bs ${ped.total.toFixed(2)}`
+  );
+
   const msgAyuda = encodeURIComponent(
     `Hola, necesito ayuda con mi pedido ${ped.codigo}.`
   );
@@ -52,7 +60,7 @@ export default async function Pedido({ params, searchParams }) {
     <>
       <TiendaHeader nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
 
-      <main className="mx-auto max-w-3xl px-4 py-6 space-y-4">
+      <main data-pedido="v2" className="mx-auto max-w-3xl px-4 py-6 space-y-4">
         {sp?.nuevo && <VaciarCarrito />}
 
         <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
@@ -112,6 +120,23 @@ export default async function Pedido({ params, searchParams }) {
             instrucciones={aj.instrucciones_pago || ""}
             avisado={Boolean(ped.avisado_en)}
           />
+        )}
+
+        {ped.estado === "pagado" && (
+          <div className="rounded-2xl bg-esmeralda/15 border border-esmeralda shadow-sm p-5">
+            <p className="text-sm font-semibold text-marino">
+              Pago confirmado. Ahora coordinamos tu entrega por WhatsApp.
+            </p>
+            {n && (
+              <a
+                href={`https://wa.me/${n}?text=${msgComprobante}`}
+                className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-esmeralda py-3 font-semibold text-marino"
+              >
+                <FiMessageCircle className="h-5 w-5" />
+                Coordinar entrega por WhatsApp
+              </a>
+            )}
+          </div>
         )}
 
         {ped.estado === "entregado" && (
