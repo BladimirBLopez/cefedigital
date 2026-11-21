@@ -4,14 +4,22 @@ import { useRef, useState } from "react";
 
 async function reducir(file) {
   const img = await createImageBitmap(file);
-  const k = Math.min(1, 1000 / Math.max(img.width, img.height));
+  const LADO = 1000;
+  const lado = Math.max(img.width, img.height);
+  const casiCuadrada = Math.abs(img.width - img.height) / lado < 0.05;
+  const caja = casiCuadrada ? LADO : Math.round(LADO * 0.92);
+  const k = Math.min(2, caja / lado);
   const w = Math.round(img.width * k);
   const h = Math.round(img.height * k);
   const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  c.getContext("2d").drawImage(img, 0, 0, w, h);
-  const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.82));
+  c.width = LADO;
+  c.height = LADO;
+  const g = c.getContext("2d");
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, LADO, LADO);
+  g.imageSmoothingQuality = "high";
+  g.drawImage(img, Math.round((LADO - w) / 2), Math.round((LADO - h) / 2), w, h);
+  const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.85));
   return new File([blob], "foto.jpg", { type: "image/jpeg" });
 }
 
