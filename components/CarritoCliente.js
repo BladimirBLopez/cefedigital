@@ -123,8 +123,8 @@ export default function CarritoCliente({ error }) {
         <input type="hidden" name="items" value={JSON.stringify(payload)} />
         <div>
           <label className="block text-xs text-neutral-500">
-            Tu WhatsApp
-            <input name="cliente_whatsapp" type="tel" required minLength={8} maxLength={15} inputMode="tel" autoComplete="tel" placeholder="Ej. 71234567" className={campo + " mt-1"} />
+            Tu WhatsApp (opcional, para avisarte cuando venza tu servicio)
+            <input name="cliente_whatsapp" type="tel" minLength={8} maxLength={15} inputMode="tel" autoComplete="tel" placeholder="Ej. 71234567" className={campo + " mt-1"} />
           </label>
         </div>
         <p className="text-xs text-neutral-500">Al hacer el pedido te damos un código y las instrucciones de pago. El total final se confirma al crear el pedido.</p>

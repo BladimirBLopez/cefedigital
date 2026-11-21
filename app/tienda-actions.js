@@ -13,11 +13,11 @@ function leerCliente(formData) {
 
   if (whatsapp.length === 8) whatsapp = "591" + whatsapp;
 
-  if (whatsapp.length < 8 || whatsapp.length > 15) {
+  if (whatsapp && (whatsapp.length < 8 || whatsapp.length > 15)) {
     return null;
   }
 
-  return { nombre: "+" + whatsapp, whatsapp };
+  return { nombre: whatsapp ? "+" + whatsapp : "Invitado", whatsapp: whatsapp || null };
 }
 
 async function guardarPedido({ cliente, codigo, total, lineas }) {

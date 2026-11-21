@@ -28,6 +28,8 @@ export default async function Ajustes() {
             placeholder={"Ej: Paga por QR o transferencia a la cuenta ...\nEnvía tu comprobante por WhatsApp."}
             className={campo}
           />
+          <label className="block text-xs text-neutral-500">Titular de la cuenta de pago (opcional)</label>
+          <input name="titular_pago" defaultValue={a.titular_pago || ""} maxLength={80} className={campo} />
           <button className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar ajustes</button>
         </form>
       </main>

@@ -121,6 +121,7 @@ export async function guardarAjustes(formData) {
     nombre_tienda: String(formData.get("nombre_tienda") || "").trim().slice(0, 60) || "Cefe Digital",
     whatsapp: String(formData.get("whatsapp") || "").replace(/\D/g, "").slice(0, 15),
     instrucciones_pago: String(formData.get("instrucciones_pago") || "").trim().slice(0, 1000),
+    titular_pago: String(formData.get("titular_pago") || "").trim().slice(0, 80),
   };
 
   for (const [k, v] of Object.entries(datos)) {

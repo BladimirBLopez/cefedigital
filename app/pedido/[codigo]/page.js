@@ -5,6 +5,7 @@ import { obtenerAjustes, limpiarWhatsapp } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import VaciarCarrito from "@/components/VaciarCarrito";
+import PagoPedido from "@/components/PagoPedido";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false } };
@@ -22,7 +23,7 @@ export default async function Pedido({ params, searchParams }) {
   const aj = await obtenerAjustes();
 
   const [ped] = await sql`
-    select p.id, p.codigo, p.total::float as total, p.estado, c.nombre
+    select p.id, p.codigo, p.total::float as total, p.estado, p.avisado_en, c.nombre
     from pedidos p
     join clientes c on c.id = p.cliente_id
     where p.codigo = ${String(codigo).toUpperCase()}`;
@@ -103,23 +104,14 @@ export default async function Pedido({ params, searchParams }) {
         </div>
 
         {ped.estado === "pendiente" && (
-          <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
-            <h2 className="text-lg font-bold mb-2">Cómo pagar</h2>
-
-            <p className="text-sm text-neutral-600 whitespace-pre-line">
-              {aj.instrucciones_pago || "Escríbenos por WhatsApp y te damos los datos para pagar."}
-            </p>
-
-            {n && (
-              <a href={`https://wa.me/${n}?text=${msgPago}`} className="block text-center mt-4 rounded-xl bg-esmeralda hover:brightness-95 transition text-marino font-semibold py-3">
-                Enviar comprobante por WhatsApp
-              </a>
-            )}
-
-            <p className="text-xs text-neutral-500 mt-3">
-              Cuando confirmemos tu pago, coordinaremos la entrega por WhatsApp. Guarda tu código.
-            </p>
-          </div>
+          <PagoPedido
+            codigo={ped.codigo}
+            total={ped.total}
+            whatsapp={n}
+            titular={aj.titular_pago || ""}
+            instrucciones={aj.instrucciones_pago || ""}
+            avisado={Boolean(ped.avisado_en)}
+          />
         )}
 
         {ped.estado === "entregado" && (
