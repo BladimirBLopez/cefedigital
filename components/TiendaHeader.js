@@ -2,6 +2,7 @@ import Link from "next/link";
 import { limpiarWhatsapp } from "@/lib/ajustes";
 import { FaWhatsapp } from "react-icons/fa";
 import BotonCarrito from "@/components/BotonCarrito";
+import AccesoGoogle from "@/components/AccesoGoogle";
 
 export default function TiendaHeader({ nombre, whatsapp }) {
   const n = limpiarWhatsapp(whatsapp);
@@ -13,9 +14,10 @@ export default function TiendaHeader({ nombre, whatsapp }) {
           {n && (
             <a href={`https://wa.me/${n}`} className="flex items-center gap-1.5 text-xs font-semibold text-marino bg-esmeralda hover:brightness-95 rounded-full px-3 py-2">
               <FaWhatsapp className="h-4 w-4" />
-              Soporte por WhatsApp
+              <span className="hidden sm:inline">Soporte por WhatsApp</span><span className="sm:hidden">Soporte</span>
             </a>
           )}
+          <AccesoGoogle />
           <BotonCarrito />
         </div>
       </div>
