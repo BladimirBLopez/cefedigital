@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { ipCliente, contar, anotar as anotarIntento } from "@/lib/limite";
 import { anotar as registrar } from "@/lib/registro";
+import { emparejar } from "@/lib/emparejar-pago";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ function claveOk(recibida) {
   return timingSafeEqual(huella(recibida), huella(esperada));
 }
 
-const respuesta = (cuerpo, estado = 200) => NextResponse.json(cuerpo, { status: estado });
+const respuesta = (cuerpo, estado = 200) =>
+  NextResponse.json(cuerpo, { status: estado, headers: { "x-pago-v": "2" } });
 
 export async function POST(request) {
   if (!process.env.PAGO_WEBHOOK_SECRET) return respuesta({ ok: false, error: "no_configurado" }, 503);
@@ -40,6 +42,9 @@ export async function POST(request) {
   const ref = String(datos?.ref || "").trim().slice(0, 200);
   const monto = Math.round(Number(datos?.monto) * 100) / 100;
   const texto = String(datos?.texto || "").slice(0, 2000).toUpperCase();
+  const pagador = String(datos?.pagador || "").trim().slice(0, 120);
+  const recibidoMs = Date.parse(String(datos?.recibido || ""));
+  const recibido = new Date(Number.isFinite(recibidoMs) ? recibidoMs : Date.now()).toISOString();
   if (!ref || !Number.isFinite(monto) || monto <= 0 || monto > 100000) {
     return respuesta({ ok: false, error: "datos" }, 400);
   }
@@ -47,12 +52,19 @@ export async function POST(request) {
   let nuevoId = null;
   try {
     const [nuevo] = await sql`
-      insert into pagos_recibidos (ref, monto, estado)
-      values (${ref}, ${monto}, 'recibido')
+      insert into pagos_recibidos (ref, monto, estado, pagador, recibido_en)
+      values (${ref}, ${monto}, 'recibido', ${pagador || null}, ${recibido}::timestamptz)
       on conflict (ref) do nothing
       returning id`;
-    if (!nuevo) return respuesta({ ok: true, duplicado: true });
-    nuevoId = nuevo.id;
+    let fila = nuevo;
+    if (!fila) {
+      const [ex] = await sql`select id, estado from pagos_recibidos where ref = ${ref}`;
+      if (!ex || ex.estado !== "esperando") {
+        return respuesta({ ok: true, duplicado: true, estado: ex ? ex.estado : null });
+      }
+      fila = ex;
+    }
+    nuevoId = nuevo ? nuevo.id : null;
 
     const codigos = [...new Set(texto.match(/\b[0-9A-F]{12}\b/g) || [])].slice(0, 5);
     let pedido = null;
@@ -74,14 +86,21 @@ export async function POST(request) {
       break;
     }
 
+    let esperando = false;
     if (!pedido && !codigos.length && process.env.PAGO_ASIGNAR_POR_MONTO === "1") {
-      const candidatos = await sql`
-        select id, codigo, total::float as total, estado from pedidos
-        where estado = 'pendiente' and abs(total - ${monto}) <= 0.01
-          and creado_en > now() - interval '24 hours'
-        limit 2`;
-      if (candidatos.length === 1) pedido = candidatos[0];
-      else if (candidatos.length > 1) motivo = "ambiguo";
+      const r = await emparejar({ monto, pagador, recibido });
+      if (r.pedido) {
+        pedido = r.pedido;
+      } else {
+        motivo = r.motivo;
+        esperando = Boolean(r.esperando) && Date.now() - Date.parse(recibido) < 2 * 60 * 60 * 1000;
+        if (r.esperando && !esperando) motivo = "sin_aviso";
+      }
+    }
+
+    if (!pedido && esperando) {
+      await sql`update pagos_recibidos set estado = 'esperando', motivo = ${motivo} where id = ${fila.id}`;
+      return respuesta({ ok: true, estado: "esperando", motivo });
     }
 
     if (pedido) {
@@ -91,7 +110,7 @@ export async function POST(request) {
         where id = ${pedido.id} and estado = 'pendiente'
         returning id, codigo`;
       if (r) {
-        await sql`update pagos_recibidos set estado = 'asignado', pedido_id = ${r.id} where id = ${nuevo.id}`;
+        await sql`update pagos_recibidos set estado = 'asignado', pedido_id = ${r.id} where id = ${fila.id}`;
         await registrar("pago_auto", "pedido", r.id, `Pago de Bs ${monto.toFixed(2)} confirmado automáticamente (${r.codigo})`);
         revalidatePath("/admin/pedidos");
         revalidatePath("/admin");
@@ -101,7 +120,7 @@ export async function POST(request) {
       motivo = "pedido_no_pendiente";
     }
 
-    await sql`update pagos_recibidos set estado = 'sin_asignar', motivo = ${motivo} where id = ${nuevo.id}`;
+    await sql`update pagos_recibidos set estado = 'sin_asignar', motivo = ${motivo} where id = ${fila.id}`;
     await registrar("pago_sin_asignar", "pago", null, `Pago de Bs ${monto.toFixed(2)} sin asignar (${motivo})`);
     return respuesta({ ok: true, estado: "sin_asignar", motivo });
   } catch (e) {
