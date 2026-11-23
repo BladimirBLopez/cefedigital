@@ -5,103 +5,319 @@ import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import { optimizar } from "@/lib/imagen";
-import { FiZap, FiShield } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiMessageCircle,
+  FiInfo,
+  FiCheckCircle
+} from "react-icons/fi";
 import SelectorPlan from "@/components/SelectorPlan";
 import AgregarCarrito from "@/components/AgregarCarrito";
+import PrecioProducto from "@/components/PrecioProducto";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const [p] = await sql`select nombre, descripcion from productos where slug = ${slug} and activo`;
-  if (!p) return { title: "Producto no encontrado" };
+
+  const [p] = await sql`
+    SELECT nombre, descripcion
+    FROM productos
+    WHERE slug = ${slug} AND activo
+  `;
+
+  if (!p) {
+    return { title: "Producto no encontrado" };
+  }
+
   return {
     title: p.nombre,
-    description: (p.descripcion || `${p.nombre} con entrega rápida por WhatsApp.`).slice(0, 150),
+    description: (
+      p.descripcion ||
+      `${p.nombre} en Cefe Digital. Consulta los planes disponibles.`
+    ).slice(0, 150)
   };
 }
 
-const campo = "w-full rounded-xl bg-white border border-neutral-300 px-4 py-3 outline-none focus:border-intenso";
+const campo =
+  "w-full rounded-xl border border-neutral-300 bg-white " +
+  "px-4 py-3 text-sm text-marino outline-none " +
+  "focus:border-intenso focus:ring-2 focus:ring-intenso/10";
 
-export default async function Producto({ params, searchParams }) {
+export default async function Producto({
+  params,
+  searchParams
+}) {
   const { slug } = await params;
   const sp = await searchParams;
   const aj = await obtenerAjustes();
+
   const [p] = await sql`
-    select p.id, p.slug, p.nombre, p.categoria, p.descripcion, p.imagen_url, p.tipo, p.campo_cliente, p.precio::float as precio
-    from productos p where p.slug = ${slug} and p.activo`;
+    SELECT
+      id,
+      slug,
+      nombre,
+      categoria,
+      descripcion,
+      imagen_url,
+      tipo,
+      campo_cliente,
+      precio::float AS precio
+    FROM productos
+    WHERE slug = ${slug} AND activo
+  `;
+
   if (!p) notFound();
-  const esRecarga = p.tipo === "recarga";
-  const max = 5;
-  const planes = await sql`select id, perfil, pantallas, meses_pagados, duracion_dias, precio::float as precio, compartida, modalidad from planes where producto_id = ${p.id} and activo order by orden, id`;
+
+  const planes = await sql`
+    SELECT
+      id,
+      perfil,
+      pantallas,
+      meses_pagados,
+      duracion_dias,
+      precio::float AS precio,
+      compartida,
+      modalidad
+    FROM planes
+    WHERE producto_id = ${p.id} AND activo
+    ORDER BY orden, id
+  `;
+
   const hayPlanes = planes.length > 0;
-  const desde = hayPlanes ? Math.min(...planes.map((x) => x.precio)) : p.precio;
-  const grupos = [];
-  for (const pl of planes) {
-    let g = grupos.find((x) => x.perfil === pl.perfil);
-    if (!g) {
-      g = { perfil: pl.perfil, items: [] };
-      grupos.push(g);
-    }
-    g.items.push(pl);
-  }
+  const esRecarga = p.tipo === "recarga";
+  const cuentaSinPlan =
+    p.tipo === "cuenta" && !hayPlanes;
+
+  const productoCarrito = {
+    id: Number(p.id),
+    slug: p.slug,
+    nombre: p.nombre,
+    imagen: p.imagen_url,
+    precio: Number(p.precio),
+    esRecarga,
+    campo_cliente: p.campo_cliente
+  };
 
   return (
     <>
-      <TiendaHeader nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
-      <main className="mx-auto max-w-3xl px-4 py-6">
-        <Link href="/" className="text-sm font-medium text-marino hover:text-intenso">← Volver a la tienda</Link>
-        <div className="mt-4 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
-          {p.imagen_url ? (
-            <div className="relative mx-auto mb-4 aspect-square w-full max-w-md overflow-hidden rounded-xl bg-neutral-50">
-              <img src={optimizar(p.imagen_url, 900)} alt={p.nombre} className="absolute inset-0 h-full w-full object-contain" />
+      <TiendaHeader
+        nombre={aj.nombre_tienda}
+        whatsapp={aj.whatsapp}
+      />
+
+      <main className="mx-auto max-w-6xl px-4 pb-36 pt-5 sm:px-6 sm:pt-7">
+        <nav aria-label="Navegación">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition hover:text-intenso"
+          >
+            <FiArrowLeft className="h-4 w-4" />
+            Volver a la tienda
+          </Link>
+        </nav>
+
+        <div className="mt-5 grid items-start gap-5 lg:grid-cols-2 lg:gap-7">
+
+          {/* Imagen del producto */}
+          <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+            <div className="flex h-52 items-center justify-center bg-gradient-to-br from-neutral-50 via-white to-intenso/5 p-5 sm:h-72 lg:h-[380px]">
+              {p.imagen_url ? (
+                <img
+                  src={optimizar(p.imagen_url, 800)}
+                  alt={p.nombre}
+                  width={800}
+                  height={800}
+                  decoding="async"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-xl bg-intenso/5">
+                  <span className="px-6 text-center text-xl font-bold text-marino">
+                    {p.nombre}
+                  </span>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="w-full h-40 rounded-xl mb-4 bg-gradient-to-br from-intenso/10 to-turquesa/20" />
-          )}
-          {p.categoria && <span className="inline-block rounded-full bg-turquesa/25 text-marino text-xs font-medium px-2.5 py-0.5">{p.categoria}</span>}
-          <h1 className="text-2xl font-bold mt-2">{p.nombre}</h1>
-          <p className="text-3xl font-bold text-intenso mt-3">{hayPlanes && <span className="text-base font-medium text-neutral-500">Desde </span>}Bs {desde.toFixed(2)}</p>
-          {p.descripcion && <p className="text-sm text-neutral-600 mt-3 whitespace-pre-line">{p.descripcion}</p>}
-          <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-600">
-            <span className="inline-flex items-center gap-1"><FiZap className="h-3.5 w-3.5 text-electrico" />Entrega rápida por WhatsApp</span>
-            <span className="inline-flex items-center gap-1"><FiShield className="h-3.5 w-3.5 text-electrico" />Garantía de reemplazo</span>
-          </p>
+          </section>
+
+          {/* Información y compra */}
+          <div className="space-y-4">
+
+            <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6">
+              {p.categoria && (
+                <span className="inline-flex rounded-full bg-turquesa/20 px-3 py-1 text-xs font-semibold text-marino">
+                  {p.categoria}
+                </span>
+              )}
+
+              <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight text-marino sm:text-3xl">
+                {p.nombre}
+              </h1>
+
+              <div className="mt-5">
+                <PrecioProducto
+                  planes={planes}
+                  precioBase={p.precio}
+                />
+              </div>
+
+              <div className="mt-5 flex items-start gap-2 border-t border-neutral-100 pt-4 text-sm text-neutral-600">
+                <FiMessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-intenso" />
+                <span>
+                  Atención y coordinación de pedidos por WhatsApp.
+                </span>
+              </div>
+            </section>
+
+            <section
+              data-opciones
+              className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6"
+            >
+              <div>
+                <h2 className="text-lg font-bold text-marino">
+                  Configura tu compra
+                </h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  Revisa y selecciona las opciones disponibles.
+                </p>
+              </div>
+
+              {cuentaSinPlan ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  Este servicio no tiene planes disponibles en este momento.
+                </div>
+              ) : (
+                <>
+                  {hayPlanes ? (
+                    <SelectorPlan planes={planes} />
+                  ) : (
+                    <div className="flex items-start gap-2 rounded-xl bg-intenso/5 p-4">
+                      <FiCheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-intenso" />
+                      <p className="text-sm text-marino">
+                        Producto con precio fijo, sin variantes de plan.
+                      </p>
+                    </div>
+                  )}
+
+                  {esRecarga && p.campo_cliente && (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="dato_cliente"
+                        className="block text-sm font-bold text-marino"
+                      >
+                        {p.campo_cliente}
+                        <span className="ml-1 text-red-600">*</span>
+                      </label>
+
+                      <input
+                        id="dato_cliente"
+                        name="dato_cliente"
+                        required
+                        maxLength={100}
+                        placeholder={`Ingresa ${p.campo_cliente}`}
+                        className={campo}
+                      />
+                    </div>
+                  )}
+
+                  {hayPlanes ? (
+                    <input
+                      type="hidden"
+                      name="cantidad"
+                      value="1"
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="cantidad"
+                        className="block text-sm font-bold text-marino"
+                      >
+                        Cantidad
+                      </label>
+
+                      <select
+                        id="cantidad"
+                        name="cantidad"
+                        defaultValue="1"
+                        className={campo}
+                      >
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <option key={n} value={n}>
+                            {n} {n === 1 ? "unidad" : "unidades"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {sp?.error && (
+                <p
+                  role="alert"
+                  className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"
+                >
+                  {sp.error === "dato"
+                    ? `Falta: ${p.campo_cliente || "el dato solicitado"}`
+                    : sp.error === "plan"
+                      ? "Selecciona un plan válido."
+                      : sp.error === "limite"
+                        ? "Has realizado muchos pedidos seguidos. Inténtalo más tarde."
+                        : "Revisa los datos de tu pedido e inténtalo nuevamente."}
+                </p>
+              )}
+            </section>
+          </div>
         </div>
 
-        <div data-opciones className="mt-6 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
-            <h2 className="text-lg font-bold">Elige tu opción</h2>
-            <p className="text-xs text-neutral-500">Agrega al carrito y completa tu pedido allí con tu WhatsApp.</p>
-            <input type="hidden" name="producto_id" value={p.id} />
-            <input type="hidden" name="slug" value={p.slug} />
-            {hayPlanes && <SelectorPlan planes={planes} />}
-            {esRecarga && p.campo_cliente && (
-              <input name="dato_cliente" required maxLength={100} placeholder={p.campo_cliente} className={campo} />
-            )}
-            {hayPlanes ? (
-              <input type="hidden" name="cantidad" value="1" />
-            ) : (
-            <select name="cantidad" defaultValue="1" className={campo}>
-              {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>{n} {n === 1 ? "unidad" : "unidades"}</option>
-              ))}
-            </select>
-            )}
-            {sp?.error === "fallo" && <p className="text-sm text-red-600">No se pudo registrar tu pedido. Intenta nuevamente o contáctanos por WhatsApp.</p>}
-            
-            {sp?.error === "dato" && <p className="text-sm text-red-600">Falta: {p.campo_cliente || "el dato de tu cuenta"}</p>}
-            {sp?.error === "plan" && <p className="text-sm text-red-600">Elige un plan para continuar</p>}
-            {sp?.error === "limite" && <p className="text-sm text-red-600">Hiciste muchos pedidos seguidos. Espera un rato o escríbenos por WhatsApp.</p>}
-            
-            
-        </div>
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto max-w-3xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <AgregarCarrito producto={{ id: Number(p.id), slug: p.slug, nombre: p.nombre, imagen: p.imagen_url, precio: p.precio, esRecarga, campo_cliente: p.campo_cliente }} planes={planes} />
+        {/* Descripción y condiciones */}
+        <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="text-lg font-bold text-marino">
+            Información del producto
+          </h2>
+
+          {p.descripcion ? (
+            <p className="mt-3 whitespace-pre-line break-words text-sm leading-7 text-neutral-700">
+              {p.descripcion}
+            </p>
+          ) : (
+            <p className="mt-3 text-sm leading-7 text-neutral-600">
+              Consulta las características y condiciones de este servicio antes de comprar.
+            </p>
+          )}
+
+          <div className="mt-5 flex items-start gap-2 rounded-xl bg-neutral-50 p-4">
+            <FiInfo className="mt-0.5 h-5 w-5 shrink-0 text-intenso" />
+            <p className="text-xs leading-5 text-neutral-600">
+              La entrega, activación, compatibilidad y garantía pueden variar según el servicio contratado.
+              Si tienes dudas, consulta las condiciones por WhatsApp antes de realizar tu pedido.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <TiendaFooter
+        nombre={aj.nombre_tienda}
+        whatsapp={aj.whatsapp}
+      />
+
+      {/* Botón fijo de compra */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 shadow-[0_-8px_30px_rgba(0,0,0,0.07)] backdrop-blur">
+        <div className="mx-auto max-w-3xl px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+          {cuentaSinPlan ? (
+            <div className="rounded-xl bg-neutral-200 px-4 py-3.5 text-center text-sm font-bold text-neutral-500">
+              Producto no disponible
+            </div>
+          ) : (
+            <AgregarCarrito
+              producto={productoCarrito}
+              planes={planes}
+            />
+          )}
         </div>
       </div>
-      </main>
-      <TiendaFooter nombre={aj.nombre_tienda} whatsapp={aj.whatsapp} />
+
       <div className="h-24" aria-hidden="true" />
     </>
   );
