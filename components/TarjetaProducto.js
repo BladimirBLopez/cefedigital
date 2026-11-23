@@ -5,20 +5,31 @@ import AccionTarjeta from "./AccionTarjeta";
 
 export default function TarjetaProducto({ p }) {
   const Icono = iconoCategoria(p.categoria);
-  const precio = Number(p.precio);
 
+  const precio = Number(p.precio);
   const tienePrecio =
     p.precio !== null &&
     p.precio !== undefined &&
     Number.isFinite(precio);
 
   return (
-    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#454545] bg-[#292929] shadow-sm transition hover:shadow-lg">
-
+    <article
+      className="
+        flex min-w-0 flex-col overflow-hidden
+        rounded-2xl border border-intenso/25
+        bg-marino shadow-md
+        transition-all duration-200
+        hover:border-electrico hover:shadow-lg
+      "
+    >
+      {/* IMAGEN */}
       <Link
         href={`/producto/${p.slug}`}
-        aria-label={`Ver detalles de ${p.nombre}`}
-        className="relative block aspect-[4/3] w-full overflow-hidden bg-white"
+        aria-label={`Ver ${p.nombre}`}
+        className="
+          block aspect-[4/3] w-full
+          overflow-hidden bg-white
+        "
       >
         {p.imagen_url ? (
           <img
@@ -26,44 +37,75 @@ export default function TarjetaProducto({ p }) {
             alt={p.nombre}
             loading="lazy"
             decoding="async"
-            className="h-full w-full object-contain p-1.5 transition-transform duration-300 hover:scale-105"
+            className="
+              h-full w-full object-contain p-2
+              transition-transform duration-300
+              hover:scale-105
+            "
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-neutral-100">
+          <div
+            className="
+              flex h-full w-full items-center
+              justify-center bg-white
+            "
+          >
             <Icono className="h-12 w-12 text-intenso" />
           </div>
         )}
       </Link>
 
-      <div className="flex flex-1 flex-col p-3">
-        {p.categoria && (
-          <p className="mb-1 truncate text-[10px] text-neutral-400">
-            {p.categoria}
-          </p>
-        )}
+      {/* INFORMACION */}
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-3">
+
+        <p
+          className="
+            mb-1 truncate text-xs
+            font-medium text-white/70
+          "
+        >
+          {p.categoria || "Producto digital"}
+        </p>
 
         <Link
           href={`/producto/${p.slug}`}
-          className="line-clamp-2 min-h-[42px] text-[13px] font-medium leading-[21px] text-white hover:text-cian sm:text-sm"
+          className="
+            line-clamp-2 min-h-[40px]
+            text-sm font-semibold leading-5
+            text-white transition
+            hover:text-cian
+          "
         >
           {p.nombre}
         </Link>
 
-        <div className="mt-auto flex items-end justify-between gap-2 pt-4">
+        {/* PRECIO Y CARRITO */}
+        <div
+          className="
+            mt-3 flex items-end
+            justify-between gap-2
+          "
+        >
           <div className="min-w-0">
             {p.con_planes && (
-              <p className="mb-0.5 text-[10px] text-neutral-400">
+              <p className="mb-0.5 text-xs text-white/70">
                 Desde
               </p>
             )}
 
             {tienePrecio ? (
-              <p className="whitespace-nowrap text-[16px] font-extrabold tracking-tight text-[#39B9F8] sm:text-lg">
+              <p
+                className="
+                  whitespace-nowrap text-[15px]
+                  font-extrabold tracking-tight
+                  text-cian sm:text-lg
+                "
+              >
                 Bs {precio.toFixed(2)}
               </p>
             ) : (
-              <p className="text-xs font-semibold text-[#39B9F8]">
-                Consultar
+              <p className="text-xs font-semibold text-cian">
+                Consultar precio
               </p>
             )}
           </div>
