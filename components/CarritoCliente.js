@@ -111,13 +111,6 @@ export default function CarritoCliente({ error }) {
         ))}
       </ul>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-marino">
-        {[[FiZap, "Entrega rápida"], [FiMessageCircle, "Por WhatsApp"], [FiShield, "Garantía"]].map(([I, t]) => (
-          <div key={t} className="rounded-xl bg-white border border-neutral-200 py-2">
-            <I className="mx-auto mb-1 h-4 w-4 text-electrico" />{t}
-          </div>
-        ))}
-      </div>
 
       <form action={crearPedidoCarrito} className="mt-5 rounded-2xl bg-white border border-neutral-200 shadow-sm p-5 space-y-3">
         <input type="hidden" name="items" value={JSON.stringify(payload)} />
