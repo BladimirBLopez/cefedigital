@@ -1,75 +1,261 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { leerCarrito, guardarCarrito } from "./carritoLocal";
-import { textoModalidad, modalidadVieja } from "@/lib/modalidades";
-import { diasDe, textoDuracion } from "@/lib/duracion";
+import {
+  leerCarrito,
+  guardarCarrito
+} from "./carritoLocal";
+import {
+  textoModalidad,
+  modalidadVieja
+} from "@/lib/modalidades";
+import {
+  diasDe,
+  textoDuracion
+} from "@/lib/duracion";
+import { FiShoppingCart } from "react-icons/fi";
 
 const MAX_ITEMS = 10;
+
 function textoPlan(plan) {
   const n = Number(plan.pantallas) || 1;
+
   return [
+    textoModalidad(
+      plan.modalidad ||
+      modalidadVieja(plan.compartida)
+    ),
     n > 1 ? `${n} pantallas` : "",
-    textoDuracion(diasDe(plan)),
-    textoModalidad(plan.modalidad || modalidadVieja(plan.compartida)),
+    textoDuracion(diasDe(plan))
   ].filter(Boolean).join(" · ");
 }
 
-export default function AgregarCarrito({ producto, planes }) {
+export default function AgregarCarrito({
+  producto,
+  planes = []
+}) {
+  const [planId, setPlanId] = useState("");
+
+  const hayPlanes = planes.length > 0;
+
+  useEffect(() => {
+    setPlanId("");
+
+    const alSeleccionar = (evento) => {
+      setPlanId(
+        String(evento.detail?.planId || "")
+      );
+    };
+
+    window.addEventListener(
+      "cefe:seleccion-plan",
+      alSeleccionar
+    );
+
+    return () => {
+      window.removeEventListener(
+        "cefe:seleccion-plan",
+        alSeleccionar
+      );
+    };
+  }, [producto.id]);
+
+  const planSeleccionado = planes.find(
+    p => String(p.id) === planId
+  );
+
+  const habilitado = !hayPlanes || Boolean(planSeleccionado);
 
   function agregar(e) {
     e.preventDefault();
-    const btn = e.currentTarget;
-    const cont = btn.form || btn.closest("[data-opciones]") || document.querySelector("[data-opciones]");
-    const f = new FormData(btn.form || undefined);
-    if (!btn.form && cont) {
-      cont.querySelectorAll("input[name], select[name], textarea[name]").forEach((el) => {
-        if ((el.type === "radio" || el.type === "checkbox") && !el.checked) return;
-        f.set(el.name, el.value);
-      });
+
+    if (!habilitado) {
+      toast.error("Primero selecciona un plan");
+      return;
     }
-    const hayPlanes = planes.length > 0;
+
+    const boton = e.currentTarget;
+    const contenedor =
+      boton.form ||
+      boton.closest("[data-opciones]") ||
+      document.querySelector("[data-opciones]");
+
+    const form = new FormData();
+
+    if (contenedor) {
+      contenedor
+        .querySelectorAll(
+          "input[name], select[name], textarea[name]"
+        )
+        .forEach(el => {
+          if (
+            (el.type === "radio" ||
+              el.type === "checkbox") &&
+            !el.checked
+          ) return;
+
+          form.set(el.name, el.value);
+        });
+    }
+
+    const id = String(form.get("plan_id") || "");
+
     let plan = null;
+
     if (hayPlanes) {
-      plan = planes.find((x) => String(x.id) === String(f.get("plan_id") || ""));
-      if (!plan) return toast.error("Elige un plan para continuar");
+      plan = planes.find(
+        p => String(p.id) === id && id === planId
+      );
+
+      if (!plan) {
+        toast.error("Selecciona un plan válido");
+        return;
+      }
     }
-    const dato = String(f.get("dato_cliente") || "").trim();
-    if (producto.esRecarga && producto.campo_cliente && !dato) {
-      return toast.error(`Falta: ${producto.campo_cliente}`);
+
+    const dato = String(
+      form.get("dato_cliente") || ""
+    ).trim();
+
+    if (
+      producto.esRecarga &&
+      producto.campo_cliente &&
+      !dato
+    ) {
+      toast.error(
+        `Falta: ${producto.campo_cliente}`
+      );
+      return;
     }
-    const cantidad = hayPlanes ? 1 : Math.min(5, Math.max(1, Number(f.get("cantidad")) || 1));
-    const items = leerCarrito();
-    const planId = plan ? Number(plan.id) : null;
-    const igual = items.find(
-      (i) => Number(i.producto_id) === producto.id && (i.plan_id || null) === planId && (i.dato_cliente || "") === dato
+
+    const cantidad = hayPlanes
+      ? 1
+      : Math.min(
+          5,
+          Math.max(
+            1,
+            Number(form.get("cantidad")) || 1
+          )
+        );
+
+    const precio = Number(
+      plan ? plan.precio : producto.precio
     );
+
+    if (!Number.isFinite(precio) || precio < 0) {
+      toast.error("Precio no disponible");
+      return;
+    }
+
+    const items = leerCarrito();
+
+    const idPlan = plan
+      ? Number(plan.id)
+      : null;
+
+    const igual = items.find(
+      i =>
+        Number(i.producto_id) === Number(producto.id) &&
+        (i.plan_id || null) === idPlan &&
+        (i.dato_cliente || "") === dato
+    );
+
+    let cantidadEsperada = cantidad;
+
     if (igual) {
-      if (plan) return toast.error("Ese plan ya está en tu carrito");
-      igual.cantidad = Math.min(5, igual.cantidad + cantidad);
+      if (plan) {
+        toast.error(
+          "Este plan ya está en tu carrito"
+        );
+        window.dispatchEvent(
+          new Event("carrito:abrir")
+        );
+        return;
+      }
+
+      const actual = Number(igual.cantidad) || 1;
+
+      if (actual + cantidad > 5) {
+        toast.error("Máximo 5 unidades por producto");
+        return;
+      }
+
+      igual.cantidad = actual + cantidad;
+      igual.precio = precio;
+      cantidadEsperada = igual.cantidad;
     } else {
-      if (items.length >= MAX_ITEMS) return toast.error(`Máximo ${MAX_ITEMS} productos por carrito`);
+      if (items.length >= MAX_ITEMS) {
+        toast.error(
+          `Máximo ${MAX_ITEMS} productos por carrito`
+        );
+        return;
+      }
+
       items.push({
-        producto_id: producto.id,
+        producto_id: Number(producto.id),
         slug: producto.slug,
         nombre: producto.nombre,
         imagen: producto.imagen || null,
-        plan_id: planId,
+        plan_id: idPlan,
         plan_texto: plan
           ? textoPlan(plan)
           : null,
-        precio: plan ? plan.precio : producto.precio,
+        precio,
         cantidad,
-        dato_cliente: dato,
+        dato_cliente: dato
       });
     }
+
     guardarCarrito(items);
-    window.dispatchEvent(new Event("carrito:abrir"));
+
+    const guardados = leerCarrito();
+
+    const guardado = guardados.find(
+      i =>
+        Number(i.producto_id) === Number(producto.id) &&
+        (i.plan_id || null) === idPlan &&
+        (i.dato_cliente || "") === dato
+    );
+
+    if (
+      !guardado ||
+      Number(guardado.cantidad) !== cantidadEsperada
+    ) {
+      toast.error("No se pudo guardar el carrito");
+      return;
+    }
+
+    window.dispatchEvent(
+      new Event("carrito:abrir")
+    );
   }
 
   return (
-    <button type="submit" onClick={agregar} className="w-full rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3 transition">
-      Agregar al carrito
-    </button>
+    <div className="space-y-1">
+      <button
+        type="button"
+        onClick={agregar}
+        disabled={!habilitado}
+        className={
+          "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold transition " +
+          (habilitado
+            ? "bg-intenso text-white hover:bg-marino"
+            : "cursor-not-allowed bg-neutral-200 text-neutral-500")
+        }
+      >
+        <FiShoppingCart className="h-5 w-5" />
+
+        {habilitado
+          ? "Agregar al carrito"
+          : "Selecciona tu plan"}
+      </button>
+
+      {!habilitado && (
+        <p className="text-center text-xs text-neutral-500">
+          Elige una opción para continuar.
+        </p>
+      )}
+    </div>
   );
 }

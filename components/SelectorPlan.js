@@ -1,80 +1,259 @@
 "use client";
 
-import { useState } from "react";
-import { textoModalidad, modalidadVieja } from "@/lib/modalidades";
-import { diasDe, textoDuracion } from "@/lib/duracion";
+import { useEffect, useState } from "react";
+import {
+  textoModalidad,
+  modalidadVieja
+} from "@/lib/modalidades";
+import {
+  diasDe,
+  textoDuracion
+} from "@/lib/duracion";
+import {
+  FiCheckCircle,
+  FiClock,
+  FiMonitor
+} from "react-icons/fi";
 
-const campo = "w-full rounded-xl bg-white border border-neutral-300 px-4 py-3 outline-none focus:border-intenso";
-const ORDEN = ["completa", "compartida", "tu_correo", "mi_correo", "bajo_pedido", ""];
-const clave = (p) => p.modalidad || modalidadVieja(p.compartida);
-const pantDe = (p) => Number(p.pantallas) || 1;
-const pantTxt = (n) => `${n} ${n === 1 ? "pantalla" : "pantallas"}`;
-const tipoDe = (p) => `${clave(p)}|${pantDe(p)}`;
-const texto = (t) => [textoModalidad(t.m), t.n > 1 ? pantTxt(t.n) : ""].filter(Boolean).join(" · ");
+function descripcionPlan(plan, mostrarPantallas) {
+  const modalidad = textoModalidad(
+    plan.modalidad || modalidadVieja(plan.compartida)
+  );
 
-export default function SelectorPlan({ planes }) {
-  const tipos = [];
-  for (const p of planes) {
-    const k = tipoDe(p);
-    if (!tipos.some((t) => t.k === k)) tipos.push({ k, m: clave(p), n: pantDe(p) });
+  const n = Number(plan.pantallas) || 1;
+  const partes = [];
+
+  if (modalidad) partes.push(modalidad);
+
+  if (mostrarPantallas) {
+    partes.push(`${n} ${n === 1 ? "pantalla" : "pantallas"}`);
   }
-  tipos.sort((a, b) => ORDEN.indexOf(a.m) - ORDEN.indexOf(b.m) || a.n - b.n);
 
-  const [tk, setTk] = useState("");
-  const [dk, setDk] = useState("");
+  return partes.join(" · ") || "Plan estándar";
+}
 
-  const tipo = tipos.find((t) => t.k === tk) || tipos[0];
-  if (!tipo) return null;
+export default function SelectorPlan({ planes = [] }) {
+  const [duracion, setDuracion] = useState("");
+  const [planId, setPlanId] = useState("");
 
-  const disponibles = planes.filter((p) => tipoDe(p) === tipo.k);
-  const durs = [...new Set(disponibles.map(diasDe))].filter(Number.isFinite).sort((a, b) => a - b);
-  const duracion = durs.some((d) => String(d) === dk) ? dk : String(durs[0] ?? "");
-  const plan = disponibles.find((p) => String(diasDe(p)) === duracion);
+  const duraciones = [
+    ...new Set(
+      planes.map(diasDe).filter(
+        d => Number.isFinite(d) && d > 0
+      )
+    )
+  ].sort((a, b) => a - b);
+
+  const disponibles = planes.filter(
+    p => String(diasDe(p)) === duracion
+  );
+
+  const seleccionado = planes.find(
+    p => String(p.id) === planId
+  );
+
+  const mostrarPantallas = planes.some(
+    p => Number(p.pantallas) > 1
+  );
+
+  const unico = planes.length === 1;
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("cefe:seleccion-plan", {
+        detail: { planId: planId || null }
+      })
+    );
+  }, [planId]);
+
+  function elegirDuracion(dias) {
+    setDuracion(String(dias));
+    setPlanId("");
+  }
+
+  function elegirPlan(plan) {
+    setDuracion(String(diasDe(plan)));
+    setPlanId(String(plan.id));
+  }
+
+  if (!planes.length) {
+    return (
+      <p className="rounded-xl bg-neutral-50 p-4 text-sm text-neutral-600">
+        No hay planes disponibles en este momento.
+      </p>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      <input type="hidden" name="plan_id" value={plan ? plan.id : ""} />
+    <div className="space-y-5">
+      <input
+        type="hidden"
+        name="plan_id"
+        value={planId}
+      />
 
-      {tipos.length > 1 ? (
-        <label className="block text-xs font-medium text-neutral-500">
-          Tipo de acceso
-          <select value={tipo.k} onChange={(e) => setTk(e.target.value)} className={campo + " mt-1"}>
-            {tipos.map((t) => (
-              <option key={t.k} value={t.k}>{texto(t) || "Estándar"}</option>
-            ))}
-          </select>
-        </label>
+      {unico ? (
+        <section className="space-y-3">
+          <h3 className="text-sm font-bold text-marino">
+            Selecciona tu plan
+          </h3>
+
+          <button
+            type="button"
+            aria-pressed={Boolean(planId)}
+            onClick={() => elegirPlan(planes[0])}
+            className={
+              "w-full rounded-2xl border-2 p-4 text-left transition " +
+              (planId
+                ? "border-intenso bg-intenso/5"
+                : "border-neutral-200 bg-white hover:border-intenso")
+            }
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 font-semibold text-marino">
+                <FiClock className="text-intenso" />
+                {textoDuracion(diasDe(planes[0]))}
+              </span>
+
+              <FiCheckCircle
+                className={
+                  planId
+                    ? "h-6 w-6 text-intenso"
+                    : "h-6 w-6 text-neutral-300"
+                }
+              />
+            </div>
+
+            <p className="mt-2 text-sm text-neutral-600">
+              {descripcionPlan(planes[0], mostrarPantallas)}
+            </p>
+
+            <p className="mt-3 text-xl font-extrabold text-intenso">
+              Bs {Number(planes[0].precio).toFixed(2)}
+            </p>
+
+            <p className="mt-2 text-xs font-medium text-neutral-500">
+              {planId
+                ? "Plan seleccionado"
+                : "Toca para seleccionar este plan"}
+            </p>
+          </button>
+        </section>
       ) : (
-        texto(tipo) && (
-          <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3">
-            <p className="text-xs text-neutral-500">Tipo de acceso</p>
-            <p className="text-sm font-semibold text-marino mt-1">{texto(tipo)}</p>
-          </div>
-        )
+        <>
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-marino">
+              1. Selecciona la duración
+              <span className="ml-1 text-red-600">*</span>
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              {duraciones.map(d => {
+                const activo = duracion === String(d);
+
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => elegirDuracion(d)}
+                    className={
+                      "flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-3 text-sm font-semibold transition " +
+                      (activo
+                        ? "border-intenso bg-intenso text-white"
+                        : "border-neutral-200 bg-white text-marino hover:border-intenso")
+                    }
+                  >
+                    <FiClock className="h-4 w-4" />
+                    {textoDuracion(d)}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-marino">
+              2. Selecciona el tipo de acceso
+              <span className="ml-1 text-red-600">*</span>
+            </h3>
+
+            {!duracion ? (
+              <p className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
+                Primero selecciona una duración.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {disponibles.map(plan => {
+                  const activo = planId === String(plan.id);
+
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      aria-pressed={activo}
+                      onClick={() => elegirPlan(plan)}
+                      className={
+                        "flex w-full items-center justify-between gap-3 rounded-xl border-2 p-4 text-left transition " +
+                        (activo
+                          ? "border-intenso bg-intenso/5"
+                          : "border-neutral-200 bg-white hover:border-intenso")
+                      }
+                    >
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-2 text-sm font-semibold text-marino">
+                          <FiMonitor className="shrink-0 text-intenso" />
+                          {descripcionPlan(plan, mostrarPantallas)}
+                        </p>
+
+                        <p className="mt-2 text-lg font-extrabold text-intenso">
+                          Bs {Number(plan.precio).toFixed(2)}
+                        </p>
+                      </div>
+
+                      <FiCheckCircle
+                        className={
+                          "h-6 w-6 shrink-0 " +
+                          (activo
+                            ? "text-intenso"
+                            : "text-neutral-300")
+                        }
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </>
       )}
 
-      {durs.length > 1 && (
-        <label className="block text-xs font-medium text-neutral-500">
-          Duración
-          <select value={duracion} onChange={(e) => setDk(e.target.value)} className={campo + " mt-1"}>
-            {durs.map((d) => (
-              <option key={d} value={d}>{textoDuracion(d)}</option>
-            ))}
-          </select>
-        </label>
-      )}
+      <section
+        aria-live="polite"
+        className="rounded-2xl border border-intenso/15 bg-intenso/5 p-4"
+      >
+        <p className="text-xs font-medium text-neutral-500">
+          Total de tu selección
+        </p>
 
-      {plan && (
-        <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3">
-          <p className="text-xs text-neutral-500">Tu elección</p>
-          <p className="text-sm font-semibold text-marino">
-            {[texto(tipo), `${textoDuracion(Number(duracion))} de servicio`].filter(Boolean).join(" · ")}
+        {seleccionado ? (
+          <>
+            <p className="mt-1 text-sm font-semibold text-marino">
+              {descripcionPlan(seleccionado, mostrarPantallas)}
+              {" · "}
+              {textoDuracion(diasDe(seleccionado))}
+            </p>
+
+            <p className="mt-2 text-2xl font-extrabold text-intenso">
+              Bs {Number(seleccionado.precio).toFixed(2)}
+            </p>
+          </>
+        ) : (
+          <p className="mt-2 text-sm font-semibold text-neutral-500">
+            Selecciona tu plan para continuar.
           </p>
-          <p className="text-2xl font-bold text-intenso mt-1">
-            Total: Bs {plan.precio.toFixed(2)}
-          </p>
-        </div>
-      )}
+        )}
+      </section>
     </div>
   );
 }
