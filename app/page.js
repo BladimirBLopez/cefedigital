@@ -47,9 +47,9 @@ function Fila({ titulo, items, verTodos, Icono = FiGrid }) {
         )}
       </div>
 
-      <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         {items.map((p) => (
-          <TarjetaProducto key={p.slug} p={p} fila />
+          <TarjetaProducto key={p.slug} p={p} />
         ))}
       </div>
     </section>
