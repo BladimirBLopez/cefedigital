@@ -13,6 +13,7 @@ import {
   FiX,
   FiExternalLink,
   FiLogOut,
+  FiLink,
 } from "react-icons/fi";
 import { salir } from "@/app/admin/actions";
 
@@ -26,6 +27,7 @@ const GRUPOS = [
       { href: "/admin/vencimientos", texto: "Vencimientos", icono: FiClock },
     ],
   },
+  { titulo: "Proveedores", enlaces: [{ href: "/admin/proveedores/streamzone", texto: "StreamZone", icono: FiLink }] },
   { titulo: "Sistema", enlaces: [{ href: "/admin/ajustes", texto: "Ajustes", icono: FiSettings }] },
 ];
 const TODOS = GRUPOS.flatMap((g) => g.enlaces);
