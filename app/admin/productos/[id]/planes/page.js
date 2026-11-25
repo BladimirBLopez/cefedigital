@@ -5,14 +5,15 @@ import { sql } from "@/lib/db";
 import { asegurarEsquema } from "@/lib/esquema";
 import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
-import { MODALIDADES, textoModalidad, modalidadVieja } from "@/lib/modalidades";
+import { textoModalidad, modalidadVieja } from "@/lib/modalidades";
+import SelectorModalidad from "@/components/SelectorModalidad";
 import FormPlan from "@/components/FormPlan";
 import { agregarPlan, editarPrecioPlan, editarModalidadPlan, cambiarActivoPlan, borrarPlan } from "@/app/admin/acciones-planes";
 
 export const dynamic = "force-dynamic";
 
 const ERRORES = {
-  datos: "Revisa pantallas y meses",
+  datos: "Revisa pantallas y duración",
   precio: "El precio no es válido",
   costo: "El costo no es válido",
   modalidad: "Selecciona una modalidad válida.",
@@ -112,18 +113,13 @@ export default async function Planes({ params, searchParams }) {
                   <input type="hidden" name="producto_id" value={id} />
                   <input type="hidden" name="id" value={p.id} />
 
-                  <label className="flex-1 min-w-[180px] text-[11px] text-neutral-500">
-                    Cambiar modalidad
-                    <select
+                  <div className="flex-1 min-w-[180px]">
+                    <SelectorModalidad
                       name="modalidad"
-                      defaultValue={p.modalidad || modalidadVieja(p.compartida)}
-                      className="mt-0.5 w-full rounded-lg bg-neutral-100 border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-intenso"
-                    >
-                      {MODALIDADES.map(([v, tx]) => (
-                        <option key={v || "ninguna"} value={v}>{tx}</option>
-                      ))}
-                    </select>
-                  </label>
+                      value={p.modalidad || modalidadVieja(p.compartida)}
+                      compact
+                    />
+                  </div>
 
                   <button className="text-xs rounded-full bg-intenso hover:bg-marino text-white font-semibold px-4 py-2.5">
                     Guardar modalidad
