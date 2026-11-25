@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { sql } from "@/lib/db";
+import { asegurarEsquema } from "@/lib/esquema";
 import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
@@ -49,6 +50,7 @@ export default async function Producto({
   searchParams
 }) {
   const { slug } = await params;
+  await asegurarEsquema();
   const sp = await searchParams;
   const aj = await obtenerAjustes();
 
@@ -74,6 +76,9 @@ export default async function Producto({
       id,
       perfil,
       pantallas,
+      perfiles,
+      dispositivos,
+      calidad,
       meses_pagados,
       duracion_dias,
       precio::float AS precio,

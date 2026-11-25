@@ -24,6 +24,7 @@ const ERRORES = {
   planes: "Escribe al menos un precio para la cuenta.",
   planesdb: "No se pudieron guardar los planes. No se creó nada, intenta otra vez.",
   repetidas: "Repetiste un plan con la misma modalidad, pantallas y duración. Cambia uno.",
+  caracteristicas: "Revisa la cantidad de perfiles y la calidad del plan.",
 };
 
 export default async function NuevoProducto({ searchParams }) {

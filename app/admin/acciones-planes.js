@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/auth";
 import { asegurarEsquema } from "@/lib/esquema";
 import { modalidadDeForm, normalizarModalidad, textoModalidad, compartidaDe } from "@/lib/modalidades";
 import { textoDuracion } from "@/lib/duracion";
+import { normalizarDispositivos, normalizarCalidad } from "@/lib/caracteristicas-plan";
 
 const ruta = (id) => `/admin/productos/${id}/planes`;
 
@@ -45,8 +46,13 @@ export async function agregarPlan(formData) {
   const costo = dinero(formData.get("costo"));
   const modal = modalidadDeForm(formData);
   const compartida = compartidaDe(modal);
+  const perfiles = entero(formData.get("perfiles") || 1, 1, 20);
+  const dispositivos = normalizarDispositivos(formData.get("dispositivos"));
+  const calidadRaw = String(formData.get("calidad") || "").trim();
+  const calidad = normalizarCalidad(calidadRaw);
 
   if (!pantallas || !dias) redirect(`${ruta(pid)}?error=datos`);
+  if (!perfiles || (calidadRaw && !calidad)) redirect(`${ruta(pid)}?error=caracteristicas`);
   if (precio === null || Number.isNaN(precio)) redirect(`${ruta(pid)}?error=precio`);
   if (Number.isNaN(costo)) redirect(`${ruta(pid)}?error=costo`);
 
@@ -68,11 +74,11 @@ export async function agregarPlan(formData) {
 
   await sql`
     insert into planes (
-      producto_id, perfil, pantallas, meses_pagados, meses_gratis,
+      producto_id, perfil, pantallas, perfiles, dispositivos, calidad, meses_pagados, meses_gratis,
       duracion_dias, nombre, costo, precio, compartida, modalidad, activo, orden
     )
     values (
-      ${pid}, ${perfil}, ${pantallas}, ${pagados}, 0,
+      ${pid}, ${perfil}, ${pantallas}, ${perfiles}, ${dispositivos || null}, ${calidad || null}, ${pagados}, 0,
       ${duracion}, ${nombre}, ${costo}, ${precio}, ${compartida}, ${modal || null}, true, ${orden}
     )`;
 
@@ -84,6 +90,7 @@ export async function agregarPlan(formData) {
 
 export async function editarPrecioPlan(formData) {
   await requireAdmin();
+  await asegurarEsquema();
 
   const pid = Number(formData.get("producto_id"));
   const id = Number(formData.get("id"));
@@ -92,12 +99,19 @@ export async function editarPrecioPlan(formData) {
 
   const precio = dinero(formData.get("precio"));
   const costo = dinero(formData.get("costo"));
+  const perfiles = entero(formData.get("perfiles") || 1, 1, 20);
+  const dispositivos = normalizarDispositivos(formData.get("dispositivos"));
+  const calidadRaw = String(formData.get("calidad") || "").trim();
+  const calidad = normalizarCalidad(calidadRaw);
 
   if (precio === null || Number.isNaN(precio)) redirect(`${ruta(pid)}?error=precio`);
   if (Number.isNaN(costo)) redirect(`${ruta(pid)}?error=costo`);
+  if (!perfiles || (calidadRaw && !calidad)) redirect(`${ruta(pid)}?error=caracteristicas`);
 
   await sql`
-    update planes set precio = ${precio}, costo = ${costo}
+    update planes set precio = ${precio}, costo = ${costo},
+      perfiles = ${perfiles}, dispositivos = ${dispositivos || null},
+      calidad = ${calidad || null}
     where id = ${id} and producto_id = ${pid}`;
 
   await sincronizarPrecio(pid);
@@ -121,7 +135,7 @@ export async function editarModalidadPlan(formData) {
   const compartida = compartidaDe(modal);
 
   const [plan] = await sql`
-    select pl.id, pl.perfil, pl.pantallas, pl.meses_pagados,
+    select pl.id, pl.perfil, pl.pantallas, pl.duracion_dias,
            pr.slug
     from planes pl
     join productos pr on pr.id = pl.producto_id
@@ -138,7 +152,7 @@ export async function editarModalidadPlan(formData) {
     from planes
     where producto_id = ${pid}
       and pantallas = ${plan.pantallas}
-      and meses_pagados = ${plan.meses_pagados}
+      and duracion_dias = ${plan.duracion_dias}
       and modalidad is not distinct from ${modal || null}::text
       and id <> ${id}
     limit 1
@@ -148,9 +162,7 @@ export async function editarModalidadPlan(formData) {
     redirect(`${ruta(pid)}?error=repetido`);
   }
 
-  const base = `${plan.perfil} · ${plan.meses_pagados} ${
-    plan.meses_pagados === 1 ? "mes" : "meses"
-  }`;
+  const base = `${plan.perfil} · ${textoDuracion(plan.duracion_dias)}`;
 
   const etiqueta = textoModalidad(modal);
   const nombre = etiqueta ? `${base} · ${etiqueta}` : base;
@@ -195,6 +207,7 @@ export async function cambiarActivoPlan(formData) {
 
 export async function borrarPlan(formData) {
   await requireAdmin();
+  await asegurarEsquema();
 
   const pid = Number(formData.get("producto_id"));
   const id = Number(formData.get("id"));

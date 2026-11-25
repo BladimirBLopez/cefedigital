@@ -7,6 +7,9 @@ import TiendaFooter from "@/components/TiendaFooter";
 import VaciarCarrito from "@/components/VaciarCarrito";
 import PagoPedido from "@/components/PagoPedido";
 import { FiMessageCircle } from "react-icons/fi";
+import { asegurarEsquema } from "@/lib/esquema";
+import { textoCaracteristicas } from "@/lib/caracteristicas-plan";
+import { textoDuracion } from "@/lib/duracion";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false } };
@@ -21,6 +24,7 @@ const ESTADOS = {
 export default async function Pedido({ params, searchParams }) {
   const { codigo } = await params;
   const sp = await searchParams;
+  await asegurarEsquema();
   const aj = await obtenerAjustes();
 
   const [ped] = await sql`
@@ -33,7 +37,9 @@ export default async function Pedido({ params, searchParams }) {
 
   const items = await sql`
     select pi.cantidad, pi.dato_cliente, pi.plan_nombre,
-           pi.plan_compartida, pr.tipo, pr.nombre
+           pi.plan_compartida, pi.plan_pantallas, pi.plan_perfiles,
+           pi.plan_dispositivos, pi.plan_calidad,
+           pi.duracion_dias, pi.vence_en, pr.tipo, pr.nombre
     from pedido_items pi
     join productos pr on pr.id = pi.producto_id
     where pi.pedido_id = ${ped.id}`;
@@ -45,8 +51,18 @@ export default async function Pedido({ params, searchParams }) {
     `Hola, hice el pedido ${ped.codigo} por Bs ${ped.total.toFixed(2)}. Te envío mi comprobante de pago.`
   );
 
+  const caracteristicasItem = (i) => textoCaracteristicas({
+    pantallas: i.plan_pantallas,
+    perfiles: i.plan_perfiles,
+    dispositivos: i.plan_dispositivos,
+    calidad: i.plan_calidad,
+  }, false);
+
   const lineas = items
-    .map((i) => `${i.cantidad} x ${i.nombre}${i.plan_nombre ? " · " + i.plan_nombre : ""}${i.dato_cliente ? " [ID: " + i.dato_cliente + "]" : ""}`)
+    .map((i) => {
+      const caracteristicas = caracteristicasItem(i);
+      return `${i.cantidad} x ${i.nombre}${i.plan_nombre ? " · " + i.plan_nombre : ""}${caracteristicas ? " · " + caracteristicas : ""}${i.dato_cliente ? " [ID: " + i.dato_cliente + "]" : ""}`;
+    })
     .join("\n");
   const msgComprobante = encodeURIComponent(
     `Hola, mi pago del pedido ${ped.codigo} fue confirmado. Quiero coordinar la entrega.\n\n${lineas}\n\nTotal: Bs ${ped.total.toFixed(2)}`
@@ -97,6 +113,23 @@ export default async function Pedido({ params, searchParams }) {
                       {" · "}{i.plan_compartida ? "Perfil compartido" : "Cuenta completa"}
                     </span>
                   )}
+                {caracteristicasItem(i) && (
+                  <span className="block text-xs text-neutral-500">
+                    {caracteristicasItem(i)}
+                  </span>
+                )}
+                {i.duracion_dias > 0 && (
+                  <span className="block text-xs text-neutral-500">
+                    Duración contratada: {textoDuracion(i.duracion_dias)}
+                  </span>
+                )}
+                {i.vence_en && (
+                  <span className="block text-xs font-medium text-neutral-600">
+                    Fecha de vencimiento: {new Date(i.vence_en).toLocaleDateString("es-BO", {
+                      timeZone: "America/La_Paz"
+                    })}
+                  </span>
+                )}
                 {i.dato_cliente && <span className="font-mono text-xs text-neutral-500"> [ID: {i.dato_cliente}]</span>}
               </li>
             ))}

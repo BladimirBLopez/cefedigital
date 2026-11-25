@@ -4,6 +4,7 @@
 import crypto from "crypto";
 import { redirect } from "next/navigation";
 import { sql } from "@/lib/db";
+import { asegurarEsquema } from "@/lib/esquema";
 import { ipCliente, contar, anotar } from "@/lib/limite";
 
 function leerCliente(formData) {
@@ -37,7 +38,11 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
     costo_unit: l.plan && l.plan.costo != null
       ? Number(l.plan.costo) : null,
     duracion_dias: l.duracionDias == null
-      ? null : Number(l.duracionDias)
+      ? null : Number(l.duracionDias),
+    plan_pantallas: l.plan?.pantallas == null ? null : Number(l.plan.pantallas),
+    plan_perfiles: l.plan?.perfiles == null ? null : Number(l.plan.perfiles),
+    plan_dispositivos: l.plan?.dispositivos || null,
+    plan_calidad: l.plan?.calidad || null
   }));
 
   const [r] = await sql`
@@ -56,12 +61,15 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
       INSERT INTO pedido_items (
         pedido_id, producto_id, cantidad, precio_unit,
         dato_cliente, plan_id, plan_nombre, plan_compartida, costo_unit,
-        duracion_dias
+        duracion_dias, plan_pantallas, plan_perfiles,
+        plan_dispositivos, plan_calidad
       )
       SELECT
         np.id, i.producto_id, i.cantidad, i.precio_unit,
         i.dato_cliente, i.plan_id, i.plan_nombre, i.plan_compartida,
-        i.costo_unit, i.duracion_dias
+        i.costo_unit, i.duracion_dias,
+        i.plan_pantallas, i.plan_perfiles,
+        i.plan_dispositivos, i.plan_calidad
       FROM nuevo_pedido np
       CROSS JOIN jsonb_to_recordset(${JSON.stringify(registros)}::jsonb)
       AS i(
@@ -73,7 +81,11 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
         plan_nombre text,
         plan_compartida boolean,
         costo_unit numeric,
-        duracion_dias integer
+        duracion_dias integer,
+        plan_pantallas integer,
+        plan_perfiles integer,
+        plan_dispositivos text,
+        plan_calidad text
       )
       RETURNING id
     )
@@ -92,6 +104,7 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
 }
 
 export async function crearPedido(formData) {
+  await asegurarEsquema();
   const productoId = Number(formData.get("producto_id"));
   const cantidad = Number(formData.get("cantidad"));
 
@@ -124,7 +137,8 @@ export async function crearPedido(formData) {
 
   const planes = await sql`
     SELECT id, nombre, precio::float AS precio,
-           costo::float AS costo, duracion_dias, compartida
+           costo::float AS costo, duracion_dias, compartida,
+           pantallas, perfiles, dispositivos, calidad
     FROM planes
     WHERE producto_id = ${p.id} AND activo
   `;
@@ -170,6 +184,7 @@ export async function crearPedido(formData) {
 }
 
 export async function crearPedidoCarrito(formData) {
+  await asegurarEsquema();
   const cliente = leerCliente(formData);
   if (!cliente) redirect("/carrito?error=datos");
 
@@ -215,7 +230,8 @@ export async function crearPedidoCarrito(formData) {
 
     const planes = await sql`
       SELECT id, nombre, precio::float AS precio,
-             costo::float AS costo, duracion_dias, compartida
+             costo::float AS costo, duracion_dias, compartida,
+           pantallas, perfiles, dispositivos, calidad
       FROM planes
       WHERE producto_id = ${p.id} AND activo
     `;

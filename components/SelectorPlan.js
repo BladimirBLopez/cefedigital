@@ -14,6 +14,7 @@ import {
   FiClock,
   FiMonitor
 } from "react-icons/fi";
+import { textoCaracteristicas } from "@/lib/caracteristicas-plan";
 
 function descripcionPlan(plan, mostrarPantallas) {
   const modalidad = textoModalidad(
@@ -127,6 +128,11 @@ export default function SelectorPlan({ planes = [] }) {
             <p className="mt-2 text-sm text-neutral-600">
               {descripcionPlan(planes[0], mostrarPantallas)}
             </p>
+            {textoCaracteristicas(planes[0], false) && (
+              <p className="mt-1 text-xs text-neutral-500">
+                {textoCaracteristicas(planes[0], false)}
+              </p>
+            )}
 
             <p className="mt-3 text-xl font-extrabold text-intenso">
               Bs {Number(planes[0].precio).toFixed(2)}
@@ -205,6 +211,11 @@ export default function SelectorPlan({ planes = [] }) {
                           <FiMonitor className="shrink-0 text-intenso" />
                           {descripcionPlan(plan, mostrarPantallas)}
                         </p>
+                        {textoCaracteristicas(plan, false) && (
+                          <p className="mt-1 text-xs text-neutral-500">
+                            {textoCaracteristicas(plan, false)}
+                          </p>
+                        )}
 
                         <p className="mt-2 text-lg font-extrabold text-intenso">
                           Bs {Number(plan.precio).toFixed(2)}
@@ -243,6 +254,11 @@ export default function SelectorPlan({ planes = [] }) {
               {" · "}
               {textoDuracion(diasDe(seleccionado))}
             </p>
+            {textoCaracteristicas(seleccionado, false) && (
+              <p className="mt-1 text-xs text-neutral-500">
+                {textoCaracteristicas(seleccionado, false)}
+              </p>
+            )}
 
             <p className="mt-2 text-2xl font-extrabold text-intenso">
               Bs {Number(seleccionado.precio).toFixed(2)}

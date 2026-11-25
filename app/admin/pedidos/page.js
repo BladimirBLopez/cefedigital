@@ -2,6 +2,7 @@ import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { limpiarWhatsapp } from "@/lib/ajustes";
 import AdminNav from "@/components/AdminNav";
+import { asegurarEsquema } from "@/lib/esquema";
 import BotonConfirmar from "@/components/BotonConfirmar";
 import { confirmarPago, marcarEntregado, cancelarPedido } from "../acciones-pedidos";
 
@@ -39,6 +40,7 @@ const boton = "text-xs rounded-full bg-intenso hover:bg-marino text-white font-s
 
 export default async function Pedidos({ searchParams }) {
   await requireAdmin();
+  await asegurarEsquema();
   const sp = await searchParams;
   const q = sp?.q ? String(sp.q).trim().slice(0, 40) : null;
   const estado = ESTADOS.some(([e]) => e === sp?.estado) ? sp.estado : null;
@@ -57,7 +59,20 @@ export default async function Pedidos({ searchParams }) {
             when pi.plan_compartida is true and pi.plan_nombre not ilike '%Perfil compartido%' then ' · Perfil compartido'
             when pi.plan_compartida is false and pi.plan_nombre not ilike '%Cuenta completa%' then ' · Cuenta completa'
             else ''
-          end || ')',
+          end ||
+          case when pi.plan_pantallas is not null
+            and coalesce(pi.plan_nombre, '') not ilike '%pantalla%' then
+            ' · ' || pi.plan_pantallas ||
+            case when pi.plan_pantallas = 1 then ' pantalla simultánea' else ' pantallas simultáneas' end
+            else '' end ||
+          case when pi.plan_perfiles is not null then
+            ' · ' || pi.plan_perfiles ||
+            case when pi.plan_perfiles = 1 then ' perfil' else ' perfiles' end
+            else '' end ||
+          case when nullif(pi.plan_calidad, '') is not null then
+            ' · Calidad ' || pi.plan_calidad else '' end ||
+          case when nullif(pi.plan_dispositivos, '') is not null then
+            ' · Dispositivos: ' || pi.plan_dispositivos else '' end || ')',
           ''
         ) ||
         coalesce(' [ID: ' || pi.dato_cliente || ']', ''),
@@ -65,6 +80,28 @@ export default async function Pedidos({ searchParams }) {
       )
          from pedido_items pi join productos pr on pr.id = pi.producto_id
          where pi.pedido_id = p.id) as detalle,
+      (select string_agg(
+        pr.nombre || ': ' ||
+        case
+          when coalesce(pi.duracion_dias, 0) > 0
+            then concat(pi.duracion_dias, ' días')
+          else 'Duración no registrada'
+        end ||
+        case
+          when pi.vence_en is not null then
+            ' · Vence: ' || to_char(
+              pi.vence_en at time zone 'America/La_Paz',
+              'DD/MM/YYYY'
+            )
+          else ''
+        end,
+        ' | '
+      )
+       from pedido_items pi
+       join productos pr on pr.id = pi.producto_id
+       where pi.pedido_id = p.id
+         and (pi.duracion_dias is not null or pi.vence_en is not null)
+      ) as servicios,
       (select sum(pi.cantidad * (pi.precio_unit - pi.costo_unit))::float
          from pedido_items pi where pi.pedido_id = p.id and pi.costo_unit is not null) as ganancia
     from pedidos p join clientes c on c.id = p.cliente_id
@@ -112,6 +149,11 @@ export default async function Pedidos({ searchParams }) {
                   <div className="min-w-0">
                     <p className="font-mono text-sm text-acento">{p.codigo}</p>
                     <p className="text-sm mt-1">{p.detalle}</p>
+                    {p.servicios && (
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Servicio: {p.servicios}
+                      </p>
+                    )}
                     <p className="text-xs text-neutral-500 mt-1">{p.nombre} · {fecha(p.creado_en)}</p>
                     {p.estado === "entregado" && p.entregado_en && (
                       <p className="text-xs text-neutral-500">Entregado: {fecha(p.entregado_en)}</p>

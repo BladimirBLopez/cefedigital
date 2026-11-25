@@ -10,6 +10,7 @@ import { requireAdmin, cerrarSesion } from "@/lib/auth";
 import { anotar } from "@/lib/registro";
 import { asegurarEsquema } from "@/lib/esquema";
 import { subirFoto } from "@/lib/cloudinary";
+import { normalizarDispositivos, normalizarCalidad } from "@/lib/caracteristicas-plan";
 
 function hacerSlug(texto) {
   return String(texto)
@@ -91,6 +92,9 @@ export async function crearProducto(formData) {
     const preciosF = formData.getAll("plan_precio");
     const costosF = formData.getAll("plan_costo");
     const modalidadesF = formData.getAll("plan_modalidad");
+    const perfilesF = formData.getAll("plan_perfiles");
+    const dispositivosF = formData.getAll("plan_dispositivos");
+    const calidadesF = formData.getAll("plan_calidad");
     const vistos = new Set();
     for (let i = 0; i < pants.length; i++) {
       const pant = pants[i];
@@ -100,6 +104,14 @@ export async function crearProducto(formData) {
       const co = dinero(costosF[i]);
       const modalidad = normalizarModalidad(modalidadesF[i]);
       const compartida = compartidaDe(modalidad);
+      const perfilesTxt = String(perfilesF[i] ?? "").trim();
+      const perfiles = perfilesTxt ? Number(perfilesTxt) : 1;
+      const dispositivos = normalizarDispositivos(dispositivosF[i]);
+      const calidadRaw = String(calidadesF[i] ?? "").trim();
+      const calidad = normalizarCalidad(calidadRaw);
+      if (!okInt(perfiles, 1, 20) || (calidadRaw && !calidad)) {
+        redirect("/admin/productos/nuevo?error=caracteristicas");
+      }
       if (Number.isNaN(pr) || Number.isNaN(co)) redirect("/admin/productos/nuevo?error=precio");
       if (pr === null) continue;
 
@@ -113,6 +125,9 @@ export async function crearProducto(formData) {
         m,
         modalidad,
         compartida,
+        perfiles,
+        dispositivos,
+        calidad,
         precio: Math.round(pr * 100) / 100,
         costo: co === null ? 0 : Math.round(co * 100) / 100,
       });
@@ -151,11 +166,11 @@ export async function crearProducto(formData) {
         const nombrePlan = `${x.perfil} · ${textoDuracion(x.m)}${etiquetaMod ? ` · ${etiquetaMod}` : ""}`;
         await sql`
           insert into planes (
-            producto_id, perfil, pantallas, meses_pagados, meses_gratis,
+            producto_id, perfil, pantallas, perfiles, dispositivos, calidad, meses_pagados, meses_gratis,
             duracion_dias, nombre, costo, precio, compartida, modalidad, activo, orden
           )
           values (
-            ${r[0].id}, ${x.perfil}, ${x.pant}, ${x.m}, ${0},
+            ${r[0].id}, ${x.perfil}, ${x.pant}, ${x.perfiles}, ${x.dispositivos || null}, ${x.calidad || null}, ${Math.max(1, Math.round(x.m / 30))}, ${0},
             ${x.m}, ${nombrePlan}, ${x.costo}, ${x.precio},
             ${x.compartida}, ${x.modalidad || null}, true, ${x.pant * 1000 + x.m}
           )`;

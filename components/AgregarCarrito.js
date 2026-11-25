@@ -15,6 +15,7 @@ import {
   textoDuracion
 } from "@/lib/duracion";
 import { FiShoppingCart } from "react-icons/fi";
+import { textoCaracteristicas } from "@/lib/caracteristicas-plan";
 
 const MAX_ITEMS = 10;
 
@@ -27,7 +28,8 @@ function textoPlan(plan) {
       modalidadVieja(plan.compartida)
     ),
     n > 1 ? `${n} pantallas` : "",
-    textoDuracion(diasDe(plan))
+    textoDuracion(diasDe(plan)),
+    textoCaracteristicas(plan, false)
   ].filter(Boolean).join(" · ");
 }
 

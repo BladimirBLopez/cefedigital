@@ -6,6 +6,9 @@ import { asegurarEsquema } from "@/lib/esquema";
 import { requireAdmin } from "@/lib/auth";
 import AdminNav from "@/components/AdminNav";
 import { textoModalidad, modalidadVieja } from "@/lib/modalidades";
+import { textoDuracion } from "@/lib/duracion";
+import { CALIDADES, textoCaracteristicas } from "@/lib/caracteristicas-plan";
+
 import SelectorModalidad from "@/components/SelectorModalidad";
 import FormPlan from "@/components/FormPlan";
 import { agregarPlan, editarPrecioPlan, editarModalidadPlan, cambiarActivoPlan, borrarPlan } from "@/app/admin/acciones-planes";
@@ -16,6 +19,7 @@ const ERRORES = {
   datos: "Revisa pantallas y duración",
   precio: "El precio no es válido",
   costo: "El costo no es válido",
+  caracteristicas: "Revisa perfiles y calidad del plan.",
   modalidad: "Selecciona una modalidad válida.",
   repetido: "Ya existe un plan con esa modalidad, pantallas y duración.",
   usado: "Este plan ya tiene pedidos. No se puede borrar, mejor desactívalo.",
@@ -23,7 +27,8 @@ const ERRORES = {
 };
 
 const AVISOS = {
-  modalidad_actualizada: "La modalidad del plan se actualizó correctamente."
+  modalidad_actualizada: "La modalidad del plan se actualizó correctamente.",
+  plan_actualizado: "El precio y las características del plan se actualizaron correctamente."
 };
 
 const mini = "w-24 rounded-lg bg-neutral-100 border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-intenso";
@@ -42,7 +47,7 @@ export default async function Planes({ params, searchParams }) {
   if (!prod) notFound();
 
   const planes = await sql`
-    select id, perfil, pantallas, meses_pagados, duracion_dias,
+    select id, perfil, pantallas, perfiles, dispositivos, calidad, meses_pagados, duracion_dias,
            costo::float as costo, precio::float as precio, compartida, modalidad, activo
     from planes where producto_id = ${id}
     order by orden, id`;
@@ -79,12 +84,16 @@ export default async function Planes({ params, searchParams }) {
             return (
               <li key={p.id} className={"rounded-2xl bg-white border border-neutral-200 p-4 " + (p.activo ? "" : "opacity-60")}>
                 <p className="font-medium">
-                  {p.perfil} · {p.meses_pagados} {p.meses_pagados === 1 ? "mes" : "meses"}
+                  {p.perfil} · {textoDuracion(p.duracion_dias)}
                 </p>
 
                 <p className="text-xs text-neutral-500 mt-1">
                   {modalidad} · {p.duracion_dias} días de servicio
                   {gan !== null && <> · Ganancia Bs {gan.toFixed(2)}</>}
+                </p>
+
+                <p className="text-xs text-neutral-500 mt-1">
+                  {textoCaracteristicas(p)}
                 </p>
 
                 <form action={editarPrecioPlan} className="flex flex-wrap items-end gap-2 mt-3">
@@ -99,6 +108,24 @@ export default async function Planes({ params, searchParams }) {
                   <label className="text-[11px] text-neutral-500">
                     Costo
                     <input name="costo" inputMode="decimal" defaultValue={p.costo ?? ""} className={mini + " block mt-0.5"} />
+                  </label>
+
+                  <label className="text-[11px] text-neutral-500">
+                    Perfiles
+                    <input name="perfiles" type="number" min="1" max="20" defaultValue={p.perfiles ?? 1} className={mini + " block mt-0.5"} />
+                  </label>
+
+                  <label className="text-[11px] text-neutral-500">
+                    Dispositivos compatibles
+                    <input name="dispositivos" maxLength={300} defaultValue={p.dispositivos || ""} placeholder="Smart TV, Android, PC..." className={mini + " block mt-0.5 w-full"} />
+                  </label>
+
+                  <label className="text-[11px] text-neutral-500">
+                    Calidad
+                    <select name="calidad" defaultValue={p.calidad || ""} className={mini + " block mt-0.5"}>
+                      <option value="">No especificada</option>
+                      {CALIDADES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </label>
 
                   <button className="text-xs rounded-full bg-intenso hover:bg-marino text-white font-semibold px-3 py-2">
