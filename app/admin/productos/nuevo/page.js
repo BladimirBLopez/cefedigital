@@ -5,6 +5,7 @@ import SubirFoto from "@/components/SubirFoto";
 import CamposProducto from "@/components/CamposProducto";
 import SelectorCategoria from "@/components/SelectorCategoria";
 import { sql } from "@/lib/db";
+import { asegurarEsquema } from "@/lib/esquema";
 import { crearProducto } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ const ERRORES = {
 
 export default async function NuevoProducto({ searchParams }) {
   await requireAdmin();
+  await asegurarEsquema();
   const sp = await searchParams;
   const cats = await sql`
     select categoria from (

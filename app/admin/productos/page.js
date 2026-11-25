@@ -66,7 +66,13 @@ export default async function Productos({ searchParams }) {
     const s = u.toString();
     return "/admin/productos" + (s ? "?" + s : "");
   };
-  const categorias = [...new Set(todos.map((p) => p.categoria || "Sin categoría"))].sort((a, b) => a.localeCompare(b, "es"));
+  const categoriasRegistradas = await sql`
+    select nombre as categoria from categorias order by orden, nombre
+  `;
+  const categorias = [...new Set([
+    ...categoriasRegistradas.map((c) => c.categoria),
+    ...todos.map((p) => p.categoria || "Sin categoría")
+  ])].filter(Boolean).sort((a, b) => a.localeCompare(b, "es"));
   const hrefCat = (c) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);

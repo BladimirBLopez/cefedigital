@@ -66,11 +66,17 @@ export default async function Home({ searchParams }) {
   const aj = await obtenerAjustes();
 
   const cats = await sql`
-    select p.categoria from productos p
-    left join categorias c on c.nombre = p.categoria
-    where p.activo and p.categoria is not null
-    group by p.categoria
-    order by min(coalesce(c.orden, 9999)), p.categoria
+    select categoria
+    from (
+      select nombre as categoria, orden
+      from categorias
+      union all
+      select categoria, 9999 as orden
+      from productos
+      where activo and categoria is not null
+    ) t
+    group by categoria
+    order by min(orden), categoria
   `;
 
   let lista = [];
