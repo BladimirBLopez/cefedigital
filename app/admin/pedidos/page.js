@@ -4,7 +4,7 @@ import { limpiarWhatsapp } from "@/lib/ajustes";
 import AdminNav from "@/components/AdminNav";
 import { asegurarEsquema } from "@/lib/esquema";
 import BotonConfirmar from "@/components/BotonConfirmar";
-import { confirmarPago, marcarEntregado, cancelarPedido } from "../acciones-pedidos";
+import { confirmarPago, marcarEntregado, cancelarPedido, procesarPedidoStreamZone } from "../acciones-pedidos";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,7 @@ const ERRORES = {
   no_existe: "El pedido no existe",
   fallo: "No se pudo confirmar, intenta de nuevo",
   cancelacion: "No se pudo cancelar. Comprueba que el pedido siga pendiente.",
+  streamzone: "No se pudo procesar StreamZone. Revisa la conexión y el saldo del proveedor.",
 };
 
 const fecha = (d) => new Date(d).toLocaleString("es-BO", { timeZone: "America/La_Paz" });
@@ -103,7 +104,26 @@ export default async function Pedidos({ searchParams }) {
          and (pi.duracion_dias is not null or pi.vence_en is not null)
       ) as servicios,
       (select sum(pi.cantidad * (pi.precio_unit - pi.costo_unit))::float
-         from pedido_items pi where pi.pedido_id = p.id and pi.costo_unit is not null) as ganancia
+         from pedido_items pi where pi.pedido_id = p.id and pi.costo_unit is not null) as ganancia,
+      (select count(*)::int
+       from pedido_items spi
+       join productos spr on spr.id = spi.producto_id
+       where spi.pedido_id = p.id and spr.proveedor = 'streamzone'
+      ) as streamzone_items,
+      (select count(*)::int from streamzone_compras sc
+       where sc.pedido_id = p.id and sc.estado = 'completado'
+      ) as streamzone_completados,
+      (select count(*)::int from streamzone_compras sc
+       where sc.pedido_id = p.id
+         and (
+           sc.estado in ('pendiente', 'error')
+           or (sc.estado = 'procesando' and
+             (sc.procesando_en is null or sc.procesando_en < now() - interval '10 minutes'))
+         )
+      ) as streamzone_reintentables,
+      (select count(*)::int from streamzone_compras sc
+       where sc.pedido_id = p.id
+      ) as streamzone_registrados
     from pedidos p join clientes c on c.id = p.cliente_id
     where (${q}::text is null or p.codigo ilike '%' || ${q} || '%' or c.nombre ilike '%' || ${q} || '%' or c.whatsapp ilike '%' || ${q} || '%')
       and (${estado}::text is null or p.estado = ${estado})
@@ -139,6 +159,11 @@ export default async function Pedidos({ searchParams }) {
 
         {sp?.error && <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ERRORES[sp.error] || ERRORES.fallo}</p>}
 
+        {sp?.aviso === "streamzone_procesado" && (
+          <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Se revisó el procesamiento de StreamZone. Comprueba el estado de las entregas.
+          </p>
+        )}
         <ul className="space-y-3">
           {pedidos.length === 0 && <li className="text-sm text-neutral-500">{q || estado ? "No se encontró ningún pedido." : "Todavía no hay pedidos."}</li>}
           {pedidos.map((p) => {
@@ -155,6 +180,11 @@ export default async function Pedidos({ searchParams }) {
                       </p>
                     )}
                     <p className="text-xs text-neutral-500 mt-1">{p.nombre} · {fecha(p.creado_en)}</p>
+                    {Number(p.streamzone_items || 0) > 0 && (
+                      <p className="text-xs text-neutral-500 mt-1">
+                        StreamZone: {p.streamzone_completados || 0}/{p.streamzone_items} compras completadas
+                      </p>
+                    )}
                     {p.estado === "entregado" && p.entregado_en && (
                       <p className="text-xs text-neutral-500">Entregado: {fecha(p.entregado_en)}</p>
                     )}
@@ -196,6 +226,23 @@ export default async function Pedidos({ searchParams }) {
                       </BotonConfirmar>
                     </form>
                   )}
+                  {["pagado", "entregado"].includes(p.estado) &&
+                    Number(p.streamzone_items || 0) > Number(p.streamzone_completados || 0) &&
+                    (
+                      Number(p.streamzone_reintentables || 0) > 0 ||
+                      Number(p.streamzone_registrados || 0) < Number(p.streamzone_items || 0)
+                    ) && (
+                    <form action={procesarPedidoStreamZone}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <BotonConfirmar
+                        mensaje={`¿Procesar o reintentar la compra StreamZone del pedido ${p.codigo}? Esta operación puede debitar saldo del proveedor.`}
+                        className={boton}
+                      >
+                        Procesar StreamZone
+                      </BotonConfirmar>
+                    </form>
+                  )}
+
                 </div>
               </li>
             );

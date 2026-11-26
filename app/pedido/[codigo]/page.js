@@ -10,6 +10,7 @@ import { FiMessageCircle } from "react-icons/fi";
 import { asegurarEsquema } from "@/lib/esquema";
 import { textoCaracteristicas } from "@/lib/caracteristicas-plan";
 import { textoDuracion } from "@/lib/duracion";
+import { obtenerComprasStreamZone } from "@/lib/comprar-streamzone";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false } };
@@ -39,10 +40,18 @@ export default async function Pedido({ params, searchParams }) {
     select pi.cantidad, pi.dato_cliente, pi.plan_nombre,
            pi.plan_compartida, pi.plan_pantallas, pi.plan_perfiles,
            pi.plan_dispositivos, pi.plan_calidad,
-           pi.duracion_dias, pi.vence_en, pr.tipo, pr.nombre
+           pi.duracion_dias, pi.vence_en, pr.tipo, pr.proveedor, pr.nombre
     from pedido_items pi
     join productos pr on pr.id = pi.producto_id
     where pi.pedido_id = ${ped.id}`;
+
+  const hayStreamZone = items.some((i) => i.proveedor === "streamzone");
+
+  const comprasStreamZone =
+    hayStreamZone && ["pagado", "entregado"].includes(ped.estado)
+      ? await obtenerComprasStreamZone(ped.id)
+      : [];
+
 
   const hayRecarga = items.some((i) => i.tipo === "recarga");
   const n = limpiarWhatsapp(aj.whatsapp);
@@ -134,6 +143,58 @@ export default async function Pedido({ params, searchParams }) {
               </li>
             ))}
           </ul>
+
+        {hayStreamZone && ["pagado", "entregado"].includes(ped.estado) && (
+          <section className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
+            <h2 className="font-semibold text-marino">Credenciales de tu servicio</h2>
+            <p className="text-xs text-neutral-500 mt-1">
+              Guarda estos datos y no compartas tus credenciales con otras personas.
+            </p>
+            {comprasStreamZone.length === 0 && (
+              <p className="text-sm text-neutral-500 mt-3">
+                Estamos preparando la entrega de tus credenciales.
+              </p>
+            )}
+            <div className="space-y-3 mt-3">
+              {comprasStreamZone.map((compra) => (
+                <div key={compra.pedido_item_id} className="border border-neutral-200 rounded-xl p-3">
+                  <p className="font-medium text-sm">{compra.producto}</p>
+                  {compra.estado === "completado" && !compra.errorLectura ? (
+                    <div className="space-y-3 mt-3">
+                      {compra.credenciales.map((credencial, indice) => (
+                        <div key={indice} className="bg-neutral-50 rounded-lg p-3 space-y-2 text-sm">
+                          {credencial.email && <p>Usuario: <span className="font-mono break-all">{credencial.email}</span></p>}
+                          {credencial.password && <p>Contraseña: <span className="font-mono break-all">{credencial.password}</span></p>}
+                          {credencial.profile && <p>Perfil: <b>{credencial.profile}</b></p>}
+                          {credencial.pin && <p>PIN: <b className="font-mono">{credencial.pin}</b></p>}
+                          {credencial.expiresAt && !Number.isNaN(Date.parse(credencial.expiresAt)) && (
+                            <p className="text-xs text-neutral-500">
+                              Vencimiento: {new Date(credencial.expiresAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-neutral-500 mt-2">
+                      {compra.errorLectura
+                        ? "No se pudieron leer las credenciales. Contacta con soporte."
+                        : compra.estado === "error"
+                          ? "La entrega necesita revisión. Estamos trabajando para solucionarla."
+                          : "Estamos procesando tu compra y preparando las credenciales."}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {n && (
+              <a href={`https://wa.me/${n}?text=${msgAyuda}`} className="block text-center mt-3 rounded-xl border border-neutral-300 py-3 text-sm font-semibold">
+                Contactar soporte
+              </a>
+            )}
+          </section>
+        )}
+
 
           <p className="text-xl font-bold text-intenso mt-4">
             Total: Bs {ped.total.toFixed(2)}

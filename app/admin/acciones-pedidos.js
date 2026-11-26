@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { asegurarEsquema } from "@/lib/esquema";
+import { procesarComprasStreamZone } from "@/lib/comprar-streamzone";
 
 async function errorPedido(id, tipo) {
   const [p] = await sql`
@@ -37,6 +38,13 @@ export async function confirmarPago(formData) {
   if (!r) {
     redirect(`/admin/pedidos?error=${await errorPedido(id, "pago")}`);
   }
+
+  try {
+    await procesarComprasStreamZone(r.id);
+  } catch (error) {
+    console.error("Procesamiento StreamZone tras pago manual:", error);
+  }
+
 
   revalidatePath("/admin/pedidos");
   revalidatePath("/admin");
@@ -113,6 +121,36 @@ export async function cancelarPedido(formData) {
   revalidatePath("/admin");
   redirect("/admin/pedidos?aviso=pedido_cancelado");
 }
+
+export async function procesarPedidoStreamZone(formData) {
+  await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id) || id <= 0) {
+    redirect("/admin/pedidos?error=streamzone");
+  }
+
+  const [pedido] = await sql`
+    select id, codigo, estado from pedidos where id = ${id}
+  `;
+
+  if (!pedido || !["pagado", "entregado"].includes(pedido.estado)) {
+    redirect("/admin/pedidos?error=streamzone");
+  }
+
+  try {
+    await procesarComprasStreamZone(id);
+  } catch (error) {
+    console.error("Reintento StreamZone:", error);
+    redirect("/admin/pedidos?error=streamzone");
+  }
+
+  revalidatePath("/admin/pedidos");
+  revalidatePath("/admin");
+  revalidatePath("/pedido/" + pedido.codigo);
+  redirect("/admin/pedidos?aviso=streamzone_procesado");
+}
+
 
 export async function guardarAjustes(formData) {
   await requireAdmin();
