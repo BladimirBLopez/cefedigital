@@ -38,7 +38,7 @@ export default async function EditarProducto({ params, searchParams }) {
   if (!Number.isInteger(id)) notFound();
   const r = await sql`
     select id, nombre, categoria, descripcion, precio::float as precio, imagen_url,
-           instrucciones, tipo, campo_cliente, vence::text as vence, duracion_dias, activo
+           instrucciones, tipo, campo_cliente, vence::text as vence, duracion_dias, activo, proveedor, proveedor_codigo, costo_proveedor_cop::float as costo_proveedor_cop, costo_proveedor_bs::float as costo_proveedor_bs, tipo_cambio_cop_bs::float as tipo_cambio_cop_bs, margen_porcentaje::float as margen_porcentaje, precio_sugerido::float as precio_sugerido, precio_manual, proveedor_disponible, stock_proveedor
     from productos where id = ${id}`;
   const p = r[0];
   if (!p) notFound();
@@ -96,6 +96,15 @@ export default async function EditarProducto({ params, searchParams }) {
               <label className={rotulo}>
                 {planes.length > 0 ? "Precio desde (Bs)" : "Precio (Bs)"}
                 <input name="precio" required inputMode="decimal" defaultValue={p.precio} readOnly={planes.length > 0} className={campo + " mt-1" + (planes.length > 0 ? " opacity-60" : "")} />
+                {p.proveedor === "streamzone" && (
+                  <span className="mt-1 block text-[11px] leading-5 text-neutral-500">
+                    Costo: COP {Number(p.costo_proveedor_cop || 0).toFixed(2)} · Bs {Number(p.costo_proveedor_bs || 0).toFixed(4)} ·
+                    Precio sugerido: Bs {Number(p.precio_sugerido || 0).toFixed(2)} ·
+                    {p.precio_manual ? "Precio manual protegido" : `Margen automático ${Number(p.margen_porcentaje || 20)}%`}
+                    {p.proveedor_disponible ? ` · Stock: ${p.stock_proveedor ?? "Disponible"}` : " · Sin stock"}
+                    . Para recuperar el precio automático, coloca el precio sugerido y guarda.
+                  </span>
+                )}
               </label>
               <label className={rotulo}>
                 Vence (proveedor)

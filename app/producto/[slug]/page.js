@@ -19,12 +19,13 @@ import PrecioProducto from "@/components/PrecioProducto";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
+  await asegurarEsquema();
   const { slug } = await params;
 
   const [p] = await sql`
     SELECT nombre, descripcion
     FROM productos
-    WHERE slug = ${slug} AND activo
+    WHERE slug = ${slug} AND activo AND (proveedor IS NULL OR proveedor_disponible = TRUE)
   `;
 
   if (!p) {
@@ -66,7 +67,7 @@ export default async function Producto({
       campo_cliente,
       precio::float AS precio
     FROM productos
-    WHERE slug = ${slug} AND activo
+    WHERE slug = ${slug} AND activo AND (proveedor IS NULL OR proveedor_disponible = TRUE)
   `;
 
   if (!p) notFound();

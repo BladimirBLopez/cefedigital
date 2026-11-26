@@ -1,11 +1,12 @@
 import { sql } from "@/lib/db";
+import { asegurarEsquema } from "@/lib/esquema";
 
 export const dynamic = "force-dynamic";
 
 const responder = (datos, status = 200) =>
   Response.json(datos, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "no-store" }
   });
 
 export async function GET(request) {
@@ -16,13 +17,16 @@ export async function GET(request) {
   }
 
   try {
+    await asegurarEsquema();
+
     const [producto] = await sql`
-      SELECT id, slug, nombre, imagen_url,
-             tipo, campo_cliente,
-             precio::float AS precio
-      FROM productos
-      WHERE slug = ${slug} AND activo
-      LIMIT 1
+      select id, slug, nombre, imagen_url, tipo, campo_cliente,
+             precio::float as precio
+      from productos
+      where slug = ${slug}
+        and activo
+        and (proveedor is null or proveedor_disponible = true)
+      limit 1
     `;
 
     if (!producto) {
@@ -30,24 +34,21 @@ export async function GET(request) {
     }
 
     const planes = await sql`
-      SELECT id, perfil, pantallas, meses_pagados,
-             duracion_dias, precio::float AS precio,
+      select id, perfil, pantallas, meses_pagados,
+             duracion_dias, precio::float as precio,
              compartida, modalidad
-      FROM planes
-      WHERE producto_id = ${producto.id} AND activo
-      ORDER BY orden, id
+      from planes
+      where producto_id = ${producto.id} and activo
+      order by orden, id
     `;
 
     return responder({
-      producto: {
-        ...producto,
-        id: Number(producto.id),
-      },
-      planes: planes.map((plan) => ({
+      producto: { ...producto, id: Number(producto.id) },
+      planes: planes.map(plan => ({
         ...plan,
         id: Number(plan.id),
-        precio: Number(plan.precio),
-      })),
+        precio: Number(plan.precio)
+      }))
     });
   } catch (error) {
     console.error("Error opciones carrito:", error);

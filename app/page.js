@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { sql } from "@/lib/db";
+import { asegurarEsquema } from "@/lib/esquema";
 import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
@@ -57,6 +58,7 @@ function Fila({ titulo, items, verTodos, Icono = FiGrid }) {
 }
 
 export default async function Home({ searchParams }) {
+  await asegurarEsquema();
   const sp = await searchParams;
   const cat = sp?.cat ? String(sp.cat) : null;
   const q = sp?.q ? String(sp.q).trim().slice(0, 40) : null;
@@ -73,7 +75,7 @@ export default async function Home({ searchParams }) {
       union all
       select categoria, 9999 as orden
       from productos
-      where activo and categoria is not null
+      where activo and (proveedor is null or proveedor_disponible = true) and categoria is not null
     ) t
     group by categoria
     order by min(orden), categoria
@@ -98,7 +100,7 @@ export default async function Home({ searchParams }) {
           where pl.producto_id = p.id and pl.activo
         ) as con_planes
       from productos p
-      where p.activo
+      where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
         and (${cat}::text is null or p.categoria = ${cat})
         and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
       order by p.id desc
@@ -120,7 +122,7 @@ export default async function Home({ searchParams }) {
           where pl.producto_id = p.id and pl.activo
         ) as con_planes
       from productos p
-      where p.activo and p.destacado
+      where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.destacado
       order by p.id desc
       limit 8
     `;
@@ -137,7 +139,7 @@ export default async function Home({ searchParams }) {
           where pl.producto_id = p.id and pl.activo
         ) as con_planes
       from productos p
-      where p.activo
+      where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
       order by p.id desc
       limit 8
     `;
@@ -158,7 +160,7 @@ export default async function Home({ searchParams }) {
             partition by p.categoria order by p.id desc
           ) as rn
         from productos p
-        where p.activo and p.categoria is not null
+        where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.categoria is not null
       ) t
       where rn <= 8
       order by categoria, rn

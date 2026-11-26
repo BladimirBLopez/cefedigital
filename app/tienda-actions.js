@@ -119,7 +119,7 @@ export async function crearPedido(formData) {
     SELECT id, slug, tipo, campo_cliente,
            precio::float AS precio, duracion_dias
     FROM productos
-    WHERE id = ${productoId} AND activo
+    WHERE id = ${productoId} AND activo AND (proveedor IS NULL OR proveedor_disponible = TRUE)
   `;
 
   if (!p) redirect("/");
@@ -215,7 +215,7 @@ export async function crearPedidoCarrito(formData) {
       SELECT id, tipo, campo_cliente,
              precio::float AS precio, duracion_dias
       FROM productos
-      WHERE id = ${productoId} AND activo
+      WHERE id = ${productoId} AND activo AND (proveedor IS NULL OR proveedor_disponible = TRUE)
     `;
 
     if (!p) redirect("/carrito?error=invalido");

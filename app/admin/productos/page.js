@@ -38,7 +38,7 @@ export default async function Productos({ searchParams }) {
 
   const todos = await sql`
     select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.destacado, p.vence::text as vence,
-      p.precio::float as precio, p.activo
+      p.precio::float as precio, p.activo, p.proveedor, p.costo_proveedor_bs::float as costo_proveedor_bs, p.precio_sugerido::float as precio_sugerido, p.margen_porcentaje::float as margen_porcentaje, p.precio_manual, p.proveedor_disponible, p.stock_proveedor
     from productos p order by p.id desc`;
 
   const vencen = (p) => ["vencido", "pronto"].includes(estadoVence(p.vence).clave);
@@ -186,6 +186,13 @@ export default async function Productos({ searchParams }) {
                   </Link>
                   <p className="text-xs text-neutral-500 truncate">
                     {p.categoria || "Sin categoría"} · {TIPOS[p.tipo] || "Clave"}
+                  {p.proveedor === "streamzone" && (
+                    <span className="block text-[11px] text-neutral-500">
+                      StreamZone · Costo Bs {Number(p.costo_proveedor_bs || 0).toFixed(4)} · Sugerido Bs {Number(p.precio_sugerido || 0).toFixed(2)} ·
+                      {p.precio_manual ? "Precio manual protegido" : `Margen automático ${Number(p.margen_porcentaje || 20)}%`} ·
+                      {p.proveedor_disponible ? `Stock: ${p.stock_proveedor ?? "Disponible"}` : "Sin stock"}
+                    </span>
+                  )}
                   </p>
                   <p className="text-sm font-semibold">
                     Bs {p.precio.toFixed(2)}{" "}
