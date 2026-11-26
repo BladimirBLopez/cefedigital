@@ -51,6 +51,48 @@ export default async function StreamZonePage({ searchParams }) {
       ? catalogo.payload.products
       : [];
 
+  if (catalogo.ok && productos.length) {
+    const seguro = (v) => {
+      if (typeof v === "string") return v.slice(0, 100);
+      if (typeof v === "number" || typeof v === "boolean") return v;
+      return null;
+    };
+
+    const campos = [
+      "type", "productType", "product_type",
+      "deliveryType", "delivery_type",
+      "deliveryMode", "delivery_mode",
+      "serviceType", "service_type",
+      "activationType", "activation_type",
+      "accountType", "account_type",
+      "method", "format", "platform"
+    ];
+
+    for (const p of productos) {
+      const registro = {
+        id: seguro(p.id),
+        code: seguro(p.code),
+        name: seguro(p.name),
+        category: seguro(p.category),
+        durationDays: seguro(p.durationDays),
+        priceCOP: seguro(p.priceCOP),
+        priceUSD: seguro(p.priceUSD),
+        inStock: seguro(p.inStock),
+        stockAvailable: seguro(p.stockAvailable),
+        fields: Object.keys(p),
+        classification: Object.fromEntries(
+          campos.map(k => [k, seguro(p[k])])
+            .filter(([,v]) => v !== null)
+        )
+      };
+
+      console.log(
+        "[DIAGNOSTICO STREAMZONE PRODUCTO]",
+        JSON.stringify(registro)
+      );
+    }
+  }
+
   return (
     <>
       <AdminNav />
