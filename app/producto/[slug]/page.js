@@ -65,6 +65,9 @@ export default async function Producto({
       imagen_url,
       tipo,
       campo_cliente,
+      proveedor,
+      central_one_target_fields,
+      central_one_target_schema,
       precio::float AS precio
     FROM productos
     WHERE slug = ${slug} AND activo AND (proveedor IS NULL OR proveedor_disponible = TRUE)
@@ -92,6 +95,33 @@ export default async function Producto({
 
   const hayPlanes = planes.length > 0;
   const esRecarga = p.tipo === "recarga";
+
+  const esquemaCo = Array.isArray(p.central_one_target_schema)
+    ? p.central_one_target_schema
+    : [];
+
+  const camposCo =
+    p.proveedor === "central_one" &&
+    Array.isArray(p.central_one_target_fields) &&
+    p.central_one_target_fields.length > 0
+      ? p.central_one_target_fields.map((clave) => {
+          const def = esquemaCo.find((c) => c && c.key === String(clave));
+          const lista =
+            def && def.type === "select" && Array.isArray(def.options)
+              ? def.options.map((o) => ({
+                  value: String(o.value),
+                  label: String(o.label || o.value)
+                }))
+              : [];
+
+          return {
+            key: String(clave),
+            label: String(def?.label || clave),
+            type: lista.length > 0 ? "select" : "text",
+            options: lista
+          };
+        })
+      : [];
   const cuentaSinPlan =
     p.tipo === "cuenta" && !hayPlanes;
 
@@ -102,7 +132,8 @@ export default async function Producto({
     imagen: p.imagen_url,
     precio: Number(p.precio),
     esRecarga,
-    campo_cliente: p.campo_cliente
+    campo_cliente: p.campo_cliente,
+    campos_co: camposCo
   };
 
   return (
@@ -206,7 +237,47 @@ export default async function Producto({
                     </div>
                   )}
 
-                  {esRecarga && p.campo_cliente && (
+                  {camposCo.map((c) => (
+                    <div key={c.key} className="space-y-2">
+                      <label
+                        htmlFor={"co_" + c.key}
+                        className="block text-sm font-bold text-marino"
+                      >
+                        {c.label}
+                        <span className="ml-1 text-red-600">*</span>
+                      </label>
+
+                      {c.type === "select" ? (
+                        <select
+                          id={"co_" + c.key}
+                          name={"co_" + c.key}
+                          required
+                          defaultValue=""
+                          className={campo}
+                        >
+                          <option value="" disabled>
+                            Elige una opción
+                          </option>
+                          {c.options.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={"co_" + c.key}
+                          name={"co_" + c.key}
+                          required
+                          maxLength={64}
+                          placeholder={"Ingresa " + c.label}
+                          className={campo}
+                        />
+                      )}
+                    </div>
+                  ))}
+
+                  {esRecarga && p.campo_cliente && camposCo.length === 0 && (
                     <div className="space-y-2">
                       <label
                         htmlFor="dato_cliente"

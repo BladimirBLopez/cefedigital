@@ -38,7 +38,7 @@ export default async function EditarProducto({ params, searchParams }) {
   if (!Number.isInteger(id)) notFound();
   const r = await sql`
     select id, nombre, categoria, descripcion, precio::float as precio, imagen_url,
-           instrucciones, tipo, campo_cliente, vence::text as vence, duracion_dias, activo, proveedor, proveedor_codigo, costo_proveedor_cop::float as costo_proveedor_cop, costo_proveedor_bs::float as costo_proveedor_bs, tipo_cambio_cop_bs::float as tipo_cambio_cop_bs, margen_porcentaje::float as margen_porcentaje, precio_sugerido::float as precio_sugerido, precio_manual, proveedor_disponible, stock_proveedor
+           instrucciones, tipo, tipo_manual, campo_cliente, vence::text as vence, duracion_dias, activo, proveedor, proveedor_codigo, costo_proveedor_cop::float as costo_proveedor_cop, costo_proveedor_bs::float as costo_proveedor_bs, tipo_cambio_cop_bs::float as tipo_cambio_cop_bs, margen_porcentaje::float as margen_porcentaje, precio_sugerido::float as precio_sugerido, precio_manual, proveedor_disponible, stock_proveedor
     from productos where id = ${id}`;
   const p = r[0];
   if (!p) notFound();
@@ -92,9 +92,15 @@ export default async function EditarProducto({ params, searchParams }) {
           <section className={tarjeta}>
             <h2 className={titulo}>2. Tipo y precios</h2>
             <CamposProducto tipo={p.tipo} campoCliente={p.campo_cliente} duracion={p.duracion_dias} sinDuracion={planes.length > 0} />
+            {p.proveedor === "streamzone" && (
+              <p className="text-xs text-neutral-500">
+                Clasificación: {p.tipo_manual ? "manual protegida" : "automática según duración del proveedor"}.
+                Si cambias el tipo o la duración y guardas, se conservarán en futuras sincronizaciones.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <label className={rotulo}>
-                {planes.length > 0 ? "Precio desde (Bs)" : "Precio (Bs)"}
+                {planes.length > 0 ? "Precio desde (Bs)" : "Precio de venta (Bs)"}
                 <input name="precio" required inputMode="decimal" defaultValue={p.precio} readOnly={planes.length > 0} className={campo + " mt-1" + (planes.length > 0 ? " opacity-60" : "")} />
                 {p.proveedor === "streamzone" && (
                   <span className="mt-1 block text-[11px] leading-5 text-neutral-500">

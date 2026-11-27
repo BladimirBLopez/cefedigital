@@ -11,6 +11,8 @@ import { asegurarEsquema } from "@/lib/esquema";
 import { textoCaracteristicas } from "@/lib/caracteristicas-plan";
 import { textoDuracion } from "@/lib/duracion";
 import { obtenerComprasStreamZone } from "@/lib/comprar-streamzone";
+import { obtenerComprasCentralOne, sincronizarEstadoCentralOne } from "@/lib/comprar-central-one";
+import RefrescarPedido from "@/components/RefrescarPedido";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false } };
@@ -52,6 +54,19 @@ export default async function Pedido({ params, searchParams }) {
       ? await obtenerComprasStreamZone(ped.id)
       : [];
 
+
+  const hayCentralOne = items.some((i) => i.proveedor === "central_one");
+
+  let comprasCentralOne = [];
+
+  if (hayCentralOne && ["pagado", "entregado"].includes(ped.estado)) {
+    try {
+      await sincronizarEstadoCentralOne(ped.id);
+      comprasCentralOne = await obtenerComprasCentralOne(ped.id);
+    } catch (e) {
+      console.error("Pedido Central One:", e?.message || "");
+    }
+  }
 
   const hayRecarga = items.some((i) => i.tipo === "recarga");
   const n = limpiarWhatsapp(aj.whatsapp);
@@ -143,6 +158,63 @@ export default async function Pedido({ params, searchParams }) {
               </li>
             ))}
           </ul>
+
+        {hayCentralOne && ["pagado", "entregado"].includes(ped.estado) && (
+          <section className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">
+            <h2 className="font-semibold text-marino">Estado de tu pedido</h2>
+
+            {comprasCentralOne.some((c) =>
+              ["pendiente", "enviando", "procesando"].includes(c.estado)
+            ) && <RefrescarPedido />}
+
+            {comprasCentralOne.length === 0 && (
+              <p className="text-sm text-neutral-600 mt-2">
+                Estamos preparando tu pedido. Actualiza esta página en unos minutos.
+              </p>
+            )}
+
+            <ul className="mt-3 space-y-3">
+              {comprasCentralOne.map((compra) => (
+                <li key={compra.pedido_item_id} className="rounded-xl border border-neutral-200 p-3">
+                  <p className="text-sm font-medium text-marino">{compra.producto}</p>
+
+                  {compra.estado === "completado" ? (
+                    <>
+                      <p className="text-sm text-neutral-600 mt-1">✓ Entregado.</p>
+
+                      {compra.codigos.map((codigo, k) => (
+                        <p key={k} className="mt-1 break-all rounded-lg bg-neutral-50 px-3 py-2 font-mono text-sm text-marino">
+                          {codigo}
+                        </p>
+                      ))}
+
+                      {compra.errorLectura && (
+                        <p className="text-sm text-neutral-700 mt-1">
+                          No pudimos mostrar tu código. Escríbenos por WhatsApp con tu pedido {ped.codigo}.
+                        </p>
+                      )}
+                    </>
+                  ) : ["error", "fallido", "reembolsado"].includes(compra.estado) ? (
+                    <p className="text-sm text-neutral-700 mt-1">
+                      Hubo un problema con este producto.{" "}
+                      <a
+                        href={"https://wa.me/" + n + "?text=" + msgAyuda}
+                        className="font-semibold underline"
+                      >
+                        Escríbenos por WhatsApp
+                      </a>{" "}
+                      con tu código {ped.codigo} y lo resolvemos.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-neutral-600 mt-1">
+                      Procesando… puede tardar unos minutos. Actualiza esta página para ver novedades.
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {hayStreamZone && ["pagado", "entregado"].includes(ped.estado) && (
           <section className="rounded-2xl bg-white border border-neutral-200 shadow-sm p-5">

@@ -21,6 +21,76 @@ function leerCliente(formData) {
   return { nombre: whatsapp ? "+" + whatsapp : "Invitado", whatsapp: whatsapp || null };
 }
 
+function datoDesdeFormulario(formData, p) {
+  const campos = Array.isArray(p.central_one_target_fields)
+    ? p.central_one_target_fields.map(String)
+    : [];
+
+  if (p.proveedor !== "central_one" || campos.length === 0) {
+    return datoDesdeFormulario(formData, p);
+  }
+
+  const objeto = {};
+
+  for (const clave of campos) {
+    objeto[clave] = String(formData.get("co_" + clave) || "").trim();
+  }
+
+  return JSON.stringify(objeto);
+}
+
+function leerObjetivoCentralOne(p, crudo) {
+  const campos = Array.isArray(p.central_one_target_fields)
+    ? p.central_one_target_fields.map(String)
+    : [];
+
+  if (p.proveedor !== "central_one" || campos.length === 0) {
+    return { ok: true, target: null, texto: null };
+  }
+
+  let origen = null;
+
+  try {
+    origen = JSON.parse(String(crudo || ""));
+  } catch {}
+
+  if (!origen || typeof origen !== "object" || Array.isArray(origen)) {
+    return { ok: false };
+  }
+
+  const esquema = Array.isArray(p.central_one_target_schema)
+    ? p.central_one_target_schema
+    : [];
+
+  const target = {};
+  const partes = [];
+
+  for (const clave of campos) {
+    const valor = String(origen[clave] ?? "").trim();
+
+    if (!valor || valor.length > 64) return { ok: false };
+
+    const def = esquema.find((c) => c && c.key === clave);
+    const etiqueta = def && def.label ? String(def.label) : clave;
+    let mostrar = valor;
+
+    if (def && def.type === "select") {
+      const op = Array.isArray(def.options)
+        ? def.options.find((o) => String(o.value) === valor)
+        : null;
+
+      if (!op) return { ok: false };
+
+      mostrar = String(op.label || valor);
+    }
+
+    target[clave] = valor;
+    partes.push(etiqueta + ": " + mostrar);
+  }
+
+  return { ok: true, target, texto: partes.join(" · ").slice(0, 200) };
+}
+
 async function guardarPedido({ cliente, codigo, total, lineas }) {
   if (!Array.isArray(lineas) || lineas.length === 0) {
     throw new Error("El pedido no tiene detalles");
@@ -30,13 +100,13 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
     producto_id: Number(l.p.id),
     cantidad: Number(l.cant),
     precio_unit: Number(l.precioUnit),
-    dato_cliente: l.dato || null,
+    dato_cliente: l.datoTexto ?? (l.dato ? String(l.dato).slice(0, 100) : null),
+    target_payload: l.target || null,
     plan_id: l.plan ? Number(l.plan.id) : null,
     plan_nombre: l.plan ? l.plan.nombre : null,
     plan_compartida: l.plan && l.plan.compartida != null
       ? l.plan.compartida === true : null,
-    costo_unit: l.plan && l.plan.costo != null
-      ? Number(l.plan.costo) : null,
+    costo_unit: l.costoUnit == null ? null : Number(l.costoUnit),
     duracion_dias: l.duracionDias == null
       ? null : Number(l.duracionDias),
     plan_pantallas: l.plan?.pantallas == null ? null : Number(l.plan.pantallas),
@@ -60,13 +130,13 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
     nuevos_items AS (
       INSERT INTO pedido_items (
         pedido_id, producto_id, cantidad, precio_unit,
-        dato_cliente, plan_id, plan_nombre, plan_compartida, costo_unit,
+        dato_cliente, target_payload, plan_id, plan_nombre, plan_compartida, costo_unit,
         duracion_dias, plan_pantallas, plan_perfiles,
         plan_dispositivos, plan_calidad
       )
       SELECT
         np.id, i.producto_id, i.cantidad, i.precio_unit,
-        i.dato_cliente, i.plan_id, i.plan_nombre, i.plan_compartida,
+        i.dato_cliente, i.target_payload, i.plan_id, i.plan_nombre, i.plan_compartida,
         i.costo_unit, i.duracion_dias,
         i.plan_pantallas, i.plan_perfiles,
         i.plan_dispositivos, i.plan_calidad
@@ -77,6 +147,7 @@ async function guardarPedido({ cliente, codigo, total, lineas }) {
         cantidad integer,
         precio_unit numeric,
         dato_cliente text,
+        target_payload jsonb,
         plan_id integer,
         plan_nombre text,
         plan_compartida boolean,
@@ -116,8 +187,10 @@ export async function crearPedido(formData) {
   ) redirect("/");
 
   const [p] = await sql`
-    SELECT id, slug, tipo, campo_cliente,
-           precio::float AS precio, duracion_dias
+    SELECT id, slug, tipo, campo_cliente, proveedor, central_one_target_fields, central_one_target_schema,
+           precio::float AS precio,
+           coalesce(costo_proveedor_bs, costo_proveedor_bs_central_one)::float AS costo_proveedor_bs,
+           duracion_dias
     FROM productos
     WHERE id = ${productoId} AND activo AND (proveedor IS NULL OR proveedor_disponible = TRUE)
   `;
@@ -127,11 +200,17 @@ export async function crearPedido(formData) {
   const cliente = leerCliente(formData);
   if (!cliente) redirect(`/producto/${p.slug}?error=datos`);
 
-  const dato = String(formData.get("dato_cliente") || "")
+  const dato = datoDesdeFormulario(formData, p)
     .trim()
-    .slice(0, 100);
+    .slice(0, 600);
 
   if (p.tipo === "recarga" && p.campo_cliente && !dato) {
+    redirect(`/producto/${p.slug}?error=dato`);
+  }
+
+  const obj = leerObjetivoCentralOne(p, dato);
+
+  if (!obj.ok) {
     redirect(`/producto/${p.slug}?error=dato`);
   }
 
@@ -172,7 +251,9 @@ export async function crearPedido(formData) {
       codigo,
       total,
       lineas: [{
-        p, plan, dato, cant, precioUnit, duracionDias
+        p, plan, dato, cant, precioUnit, duracionDias,
+        target: obj.target, datoTexto: obj.texto,
+        costoUnit: plan ? plan.costo : p.costo_proveedor_bs
       }]
     });
   } catch (e) {
@@ -212,8 +293,10 @@ export async function crearPedidoCarrito(formData) {
     ) redirect("/carrito?error=invalido");
 
     const [p] = await sql`
-      SELECT id, tipo, campo_cliente,
-             precio::float AS precio, duracion_dias
+      SELECT id, tipo, campo_cliente, proveedor, central_one_target_fields, central_one_target_schema,
+             precio::float AS precio,
+             coalesce(costo_proveedor_bs, costo_proveedor_bs_central_one)::float AS costo_proveedor_bs,
+             duracion_dias
       FROM productos
       WHERE id = ${productoId} AND activo AND (proveedor IS NULL OR proveedor_disponible = TRUE)
     `;
@@ -222,9 +305,15 @@ export async function crearPedidoCarrito(formData) {
 
     const dato = String(it?.dato_cliente || "")
       .trim()
-      .slice(0, 100);
+      .slice(0, 600);
 
     if (p.tipo === "recarga" && p.campo_cliente && !dato) {
+      redirect("/carrito?error=dato");
+    }
+
+    const obj = leerObjetivoCentralOne(p, dato);
+
+    if (!obj.ok) {
       redirect("/carrito?error=dato");
     }
 
@@ -245,12 +334,15 @@ export async function crearPedidoCarrito(formData) {
     }
 
     lineas.push({
+      target: obj.target,
+      datoTexto: obj.texto,
       p,
       plan,
       dato,
       cant: plan ? 1 : cantidad,
       precioUnit: plan ? plan.precio : p.precio,
-      duracionDias: plan?.duracion_dias ?? p.duracion_dias ?? null
+      duracionDias: plan?.duracion_dias ?? p.duracion_dias ?? null,
+      costoUnit: plan ? plan.costo : p.costo_proveedor_bs
     });
   }
 

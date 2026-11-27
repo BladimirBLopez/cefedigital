@@ -5,7 +5,7 @@ import { sql } from "@/lib/db";
 import { ipCliente, contar, anotar as anotarIntento } from "@/lib/limite";
 import { anotar as registrar } from "@/lib/registro";
 import { emparejar } from "@/lib/emparejar-pago";
-import { procesarComprasStreamZone } from "@/lib/comprar-streamzone";
+import { procesarComprasProveedores } from "@/lib/procesar-proveedores";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +114,7 @@ export async function POST(request) {
         await sql`update pagos_recibidos set estado = 'asignado', pedido_id = ${r.id} where id = ${fila.id}`;
         await registrar("pago_auto", "pedido", r.id, `Pago de Bs ${monto.toFixed(2)} confirmado automáticamente (${r.codigo})`);
         try {
-          await procesarComprasStreamZone(r.id);
+          await procesarComprasProveedores(r.id);
         } catch (error) {
           console.error("Procesamiento StreamZone tras pago automático:", error);
         }

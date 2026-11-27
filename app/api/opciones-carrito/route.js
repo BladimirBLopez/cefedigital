@@ -20,7 +20,7 @@ export async function GET(request) {
     await asegurarEsquema();
 
     const [producto] = await sql`
-      select id, slug, nombre, imagen_url, tipo, campo_cliente,
+      select id, slug, nombre, imagen_url, tipo, campo_cliente, proveedor, central_one_target_fields,
              precio::float as precio
       from productos
       where slug = ${slug}
@@ -43,7 +43,14 @@ export async function GET(request) {
     `;
 
     return responder({
-      producto: { ...producto, id: Number(producto.id) },
+      producto: (({ proveedor, central_one_target_fields, ...resto }) => ({
+        ...resto,
+        id: Number(producto.id),
+        pide_datos_co:
+          proveedor === "central_one" &&
+          Array.isArray(central_one_target_fields) &&
+          central_one_target_fields.length > 0
+      }))(producto),
       planes: planes.map(plan => ({
         ...plan,
         id: Number(plan.id),

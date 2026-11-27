@@ -86,7 +86,7 @@ export default function CarritoCliente({ error }) {
                 </button>
               </div>
               {i.plan_texto && <p className="text-xs text-neutral-500 mt-0.5">{i.plan_texto}</p>}
-              {i.dato_cliente && <p className="text-xs font-mono text-neutral-500 break-all">{i.dato_cliente}</p>}
+              {i.dato_cliente && <p className="text-xs font-mono text-neutral-500 break-all">{i.dato_texto || i.dato_cliente}</p>}
               <div className="flex items-end justify-between mt-2">
                 {!i.plan_id ? (
                   <div className="inline-flex items-center rounded-xl border border-neutral-300">

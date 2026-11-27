@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { asegurarEsquema } from "@/lib/esquema";
-import { procesarComprasStreamZone } from "@/lib/comprar-streamzone";
+import { procesarComprasProveedores } from "@/lib/procesar-proveedores";
+import { procesarComprasCentralOne } from "@/lib/comprar-central-one";
 
 async function errorPedido(id, tipo) {
   const [p] = await sql`
@@ -40,7 +41,7 @@ export async function confirmarPago(formData) {
   }
 
   try {
-    await procesarComprasStreamZone(r.id);
+    await procesarComprasProveedores(r.id);
   } catch (error) {
     console.error("Procesamiento StreamZone tras pago manual:", error);
   }
@@ -139,7 +140,7 @@ export async function procesarPedidoStreamZone(formData) {
   }
 
   try {
-    await procesarComprasStreamZone(id);
+    await procesarComprasProveedores(id);
   } catch (error) {
     console.error("Reintento StreamZone:", error);
     redirect("/admin/pedidos?error=streamzone");
@@ -151,6 +152,35 @@ export async function procesarPedidoStreamZone(formData) {
   redirect("/admin/pedidos?aviso=streamzone_procesado");
 }
 
+
+export async function procesarPedidoCentralOne(formData) {
+  await requireAdmin();
+
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id) || id <= 0) {
+    redirect("/admin/pedidos?error=centralone");
+  }
+
+  const [pedido] = await sql`
+    select id, codigo, estado from pedidos where id = ${id}
+  `;
+
+  if (!pedido || !["pagado", "entregado"].includes(pedido.estado)) {
+    redirect("/admin/pedidos?error=centralone");
+  }
+
+  try {
+    await procesarComprasCentralOne(id, { reintentar: true });
+  } catch (error) {
+    console.error("Reintento Central One:", error);
+    redirect("/admin/pedidos?error=centralone");
+  }
+
+  revalidatePath("/admin/pedidos");
+  revalidatePath("/admin");
+  revalidatePath("/pedido/" + pedido.codigo);
+  redirect("/admin/pedidos?aviso=central_one_procesado");
+}
 
 export async function guardarAjustes(formData) {
   await requireAdmin();

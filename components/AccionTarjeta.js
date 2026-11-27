@@ -128,8 +128,10 @@ export default function AccionTarjeta({ p }) {
         producto.tipo === "recarga" &&
         Boolean(producto.campo_cliente);
 
+      const pideDatosCo = producto.pide_datos_co === true;
+
       // Si requiere configuración, abrir detalle.
-      if (info.planes.length > 0 || necesitaDato) {
+      if (info.planes.length > 0 || necesitaDato || pideDatosCo) {
         irAlDetalle();
         return;
       }

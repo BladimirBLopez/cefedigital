@@ -116,9 +116,30 @@ export default function AgregarCarrito({
       }
     }
 
-    const dato = String(
+    let dato = String(
       form.get("dato_cliente") || ""
     ).trim();
+
+    const camposCo = Array.isArray(producto.campos_co)
+      ? producto.campos_co
+      : [];
+
+    if (camposCo.length > 0) {
+      const objeto = {};
+
+      for (const c of camposCo) {
+        const valor = String(form.get("co_" + c.key) || "").trim();
+
+        if (!valor) {
+          toast.error("Falta: " + c.label);
+          return;
+        }
+
+        objeto[c.key] = valor;
+      }
+
+      dato = JSON.stringify(objeto);
+    }
 
     if (
       producto.esRecarga &&
@@ -205,7 +226,22 @@ export default function AgregarCarrito({
           : null,
         precio,
         cantidad,
-        dato_cliente: dato
+        dato_cliente: dato,
+        dato_texto: (() => {
+          const cs = Array.isArray(producto.campos_co) ? producto.campos_co : [];
+          if (cs.length === 0) return null;
+          try {
+            const o = JSON.parse(dato);
+            return cs
+              .map((c) => {
+                const op = (c.options || []).find((x) => x.value === o[c.key]);
+                return c.label + ": " + (op ? op.label : o[c.key]);
+              })
+              .join(" · ");
+          } catch {
+            return null;
+          }
+        })()
       });
     }
 

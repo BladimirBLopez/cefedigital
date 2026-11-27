@@ -4,7 +4,7 @@ import { limpiarWhatsapp } from "@/lib/ajustes";
 import AdminNav from "@/components/AdminNav";
 import { asegurarEsquema } from "@/lib/esquema";
 import BotonConfirmar from "@/components/BotonConfirmar";
-import { confirmarPago, marcarEntregado, cancelarPedido, procesarPedidoStreamZone } from "../acciones-pedidos";
+import { confirmarPago, marcarEntregado, cancelarPedido, procesarPedidoStreamZone, procesarPedidoCentralOne } from "../acciones-pedidos";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,7 @@ const ERRORES = {
   fallo: "No se pudo confirmar, intenta de nuevo",
   cancelacion: "No se pudo cancelar. Comprueba que el pedido siga pendiente.",
   streamzone: "No se pudo procesar StreamZone. Revisa la conexión y el saldo del proveedor.",
+  centralone: "No se pudo procesar Central One. Revisa la conexión y el saldo del proveedor.",
 };
 
 const fecha = (d) => new Date(d).toLocaleString("es-BO", { timeZone: "America/La_Paz" });
@@ -123,7 +124,33 @@ export default async function Pedidos({ searchParams }) {
       ) as streamzone_reintentables,
       (select count(*)::int from streamzone_compras sc
        where sc.pedido_id = p.id
-      ) as streamzone_registrados
+      ) as streamzone_registrados,
+      (select count(*)::int
+       from pedido_items cpi
+       join productos cpr on cpr.id = cpi.producto_id
+       where cpi.pedido_id = p.id and cpr.proveedor = 'central_one'
+      ) as co_items,
+      (select count(*)::int from central_one_compras cc
+       where cc.pedido_id = p.id and cc.estado = 'completado'
+      ) as co_completados,
+      (select count(*)::int from central_one_compras cc
+       where cc.pedido_id = p.id and cc.estado = 'procesando'
+      ) as co_procesando,
+      (select count(*)::int from central_one_compras cc
+       where cc.pedido_id = p.id
+         and cc.estado in ('pendiente', 'incierto', 'error', 'fallido')
+      ) as co_reintentables,
+      (select count(*)::int from central_one_compras cc
+       where cc.pedido_id = p.id
+      ) as co_registrados,
+      (select string_agg(
+          coalesce(cc.lineas->>'reference_code', 'sin referencia')
+          || ' · ' || cc.estado
+          || coalesce(' · US$ ' || cc.costo_total_usd::text, '')
+          || coalesce(' · ' || cc.error_code, ''),
+          ' | ' order by cc.id)
+       from central_one_compras cc where cc.pedido_id = p.id
+      ) as co_detalle
     from pedidos p join clientes c on c.id = p.cliente_id
     where (${q}::text is null or p.codigo ilike '%' || ${q} || '%' or c.nombre ilike '%' || ${q} || '%' or c.whatsapp ilike '%' || ${q} || '%')
       and (${estado}::text is null or p.estado = ${estado})
@@ -159,6 +186,12 @@ export default async function Pedidos({ searchParams }) {
 
         {sp?.error && <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ERRORES[sp.error] || ERRORES.fallo}</p>}
 
+        {sp?.aviso === "central_one_procesado" && (
+          <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Se revisó Central One. Comprueba el estado de las recargas.
+          </p>
+        )}
+
         {sp?.aviso === "streamzone_procesado" && (
           <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             Se revisó el procesamiento de StreamZone. Comprueba el estado de las entregas.
@@ -183,6 +216,15 @@ export default async function Pedidos({ searchParams }) {
                     {Number(p.streamzone_items || 0) > 0 && (
                       <p className="text-xs text-neutral-500 mt-1">
                         StreamZone: {p.streamzone_completados || 0}/{p.streamzone_items} compras completadas
+                      </p>
+                    )}
+                    {Number(p.co_items || 0) > 0 && (
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Recargas Central One: {p.co_completados || 0}/{p.co_items} completadas
+                        {Number(p.co_procesando || 0) > 0 && " · " + p.co_procesando + " en proceso"}
+                        {p.co_detalle && (
+                          <span className="block font-mono break-all">{p.co_detalle}</span>
+                        )}
                       </p>
                     )}
                     {p.estado === "entregado" && p.entregado_en && (
@@ -239,6 +281,23 @@ export default async function Pedidos({ searchParams }) {
                         className={boton}
                       >
                         Procesar StreamZone
+                      </BotonConfirmar>
+                    </form>
+                  )}
+                  {["pagado", "entregado"].includes(p.estado) &&
+                    Number(p.co_items || 0) > Number(p.co_completados || 0) &&
+                    (
+                      Number(p.co_reintentables || 0) > 0 ||
+                      Number(p.co_procesando || 0) > 0 ||
+                      Number(p.co_registrados || 0) < Number(p.co_items || 0)
+                    ) && (
+                    <form action={procesarPedidoCentralOne}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <BotonConfirmar
+                        mensaje={`¿Procesar o actualizar la recarga Central One del pedido ${p.codigo}? Puede gastar saldo del proveedor.`}
+                        className={boton}
+                      >
+                        Procesar Central One
                       </BotonConfirmar>
                     </form>
                   )}

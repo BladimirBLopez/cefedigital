@@ -277,7 +277,15 @@ export async function editarProducto(formData) {
     update productos
     set nombre = ${p.nombre}, categoria = ${p.categoria}, descripcion = ${p.descripcion},
         precio = ${p.precio}, precio_manual = case when proveedor = 'streamzone' and precio is distinct from ${p.precio} then abs(${p.precio} - coalesce(precio_sugerido, 0)) > 0.001 else precio_manual end, imagen_url = ${imagen}, instrucciones = ${p.instrucciones},
-        tipo = ${p.tipo}, campo_cliente = ${p.campoCliente}, vence = ${p.vence}, duracion_dias = ${p.duracion}
+        tipo = ${p.tipo},
+        tipo_manual = case
+          when proveedor is not null and (
+            tipo is distinct from ${p.tipo}
+            or duracion_dias is distinct from ${p.duracion}
+          ) then true
+          else tipo_manual
+        end,
+        campo_cliente = ${p.campoCliente}, vence = ${p.vence}, duracion_dias = ${p.duracion}
     where id = ${id}`;
 
   const nuevo = {
