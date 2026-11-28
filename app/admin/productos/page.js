@@ -8,6 +8,7 @@ import { publicarLista } from "../actions";
 import { publicarJuego, ocultarJuego } from "../acciones-juegos";
 import Interruptor from "@/components/Interruptor";
 import PrecioPaquete from "@/components/PrecioPaquete";
+import ConfirmarForm from "@/components/ConfirmarForm";
 import EstrellaDestacado from "@/components/EstrellaDestacado";
 
 export const dynamic = "force-dynamic";
@@ -90,7 +91,8 @@ export default async function Productos({ searchParams }) {
              count(*)::int as total,
              count(*) filter (where activo)::int as publicados,
              count(*) filter (where not activo and precio > 0 and proveedor_disponible)::int as publicables,
-             (min(precio) filter (where precio > 0))::float as desde
+             (min(precio) filter (where precio > 0))::float as desde,
+             (array_agg(imagen_url) filter (where imagen_url is not null))[1] as imagen
       from productos
       where proveedor = 'central_one' and central_one_family_id is not null
       group by central_one_family_id
@@ -267,54 +269,61 @@ export default async function Productos({ searchParams }) {
         )}
 
         {publicables.length > 0 && (
-          <form action={publicarLista} className="mb-4 space-y-2 rounded-2xl border border-neutral-200 bg-white p-3">
+          <ConfirmarForm action={publicarLista} mensaje={`¿Publicar ${publicables.length} productos de esta página? Revisa que los precios estén bien.`} className="mb-4">
             {publicables.map((p) => <input key={p.id} type="hidden" name="ids" value={p.id} />)}
             <input type="hidden" name="volver" value={hrefPag(pagina)} />
-            <label className="flex items-center gap-2 text-xs text-neutral-600">
-              <input type="checkbox" name="confirmo" required />
-              Confirmo que revisé los precios de esta página
-            </label>
             <button className="w-full rounded-xl bg-intenso px-4 py-3 text-sm font-semibold text-white hover:bg-marino">
-              Publicar los {publicables.length} de esta página
+              Publicar los {publicables.length} ocultos de esta página
             </button>
-          </form>
+          </ConfirmarForm>
         )}
 
         {modoJuegos && (
           <ul className="space-y-3">
             {juegosAdmin.length === 0 && <li className="text-sm text-neutral-500">No hay juegos con ese filtro.</li>}
             {juegosAdmin.map((g) => (
-              <li key={g.id} className="space-y-2 rounded-2xl border border-neutral-200 bg-white p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 font-medium text-marino">{g.nombre}</p>
-                  <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">Central One</span>
+              <li key={g.id} className="rounded-2xl border border-neutral-200 bg-white p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 text-[10px] text-neutral-400">
+                    {g.imagen ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={g.imagen} alt="" loading="lazy" className="h-full w-full object-contain" />
+                    ) : (
+                      "Sin foto"
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-marino">{g.nombre}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                      <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">Central One</span>
+                      <span className="text-[11px] text-neutral-500">{g.total} paquetes · {g.publicados} publicados</span>
+                    </div>
+                    <p className="mt-0.5 text-sm font-semibold">{g.desde ? "Desde Bs " + g.desde.toFixed(2) : "Sin precio"}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-neutral-500">
-                  {g.total} paquetes · {g.publicados} publicados{g.desde ? " · desde Bs " + g.desde.toFixed(2) : ""}
-                </p>
-                {g.publicables > 0 && (
-                  <form action={publicarJuego} className="space-y-2">
-                    <input type="hidden" name="familia_id" value={g.id} />
-                    <input type="hidden" name="volver" value={hrefPag(pagina)} />
-                    <label className="flex items-center gap-2 text-xs text-neutral-600">
-                      <input type="checkbox" name="confirmo" required />
-                      Confirmo que revisé los precios de este juego
-                    </label>
-                    <button className="w-full rounded-xl bg-intenso px-4 py-2 text-sm font-semibold text-white hover:bg-marino">
-                      Publicar {g.publicables} paquetes
-                    </button>
-                  </form>
+                {(g.publicables > 0 || g.publicados > 0) && (
+                  <div className="mt-2 flex gap-2">
+                    {g.publicables > 0 && (
+                      <ConfirmarForm action={publicarJuego} mensaje={`¿Publicar ${g.publicables} paquetes de ${g.nombre}? Revisa que los precios estén bien.`} className="flex-1">
+                        <input type="hidden" name="familia_id" value={g.id} />
+                        <input type="hidden" name="volver" value={hrefPag(pagina)} />
+                        <button className="w-full rounded-xl bg-intenso px-3 py-2 text-xs font-semibold text-white hover:bg-marino">
+                          Publicar {g.publicables}
+                        </button>
+                      </ConfirmarForm>
+                    )}
+                    {g.publicados > 0 && (
+                      <ConfirmarForm action={ocultarJuego} mensaje={`¿Ocultar los ${g.publicados} paquetes publicados de ${g.nombre}?`} className="flex-1">
+                        <input type="hidden" name="familia_id" value={g.id} />
+                        <input type="hidden" name="volver" value={hrefPag(pagina)} />
+                        <button className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-xs font-semibold text-marino">
+                          Ocultar {g.publicados}
+                        </button>
+                      </ConfirmarForm>
+                    )}
+                  </div>
                 )}
-                {g.publicados > 0 && (
-                  <form action={ocultarJuego}>
-                    <input type="hidden" name="familia_id" value={g.id} />
-                    <input type="hidden" name="volver" value={hrefPag(pagina)} />
-                    <button className="w-full rounded-xl border border-neutral-300 px-4 py-2 text-sm font-semibold text-marino">
-                      Ocultar los {g.publicados} publicados
-                    </button>
-                  </form>
-                )}
-                <details className="rounded-xl border border-neutral-200">
+                <details className="mt-2 rounded-xl border border-neutral-200">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-marino">
                     Ver paquetes ({(paquetesPorJuego[g.id] || []).length})
                   </summary>
