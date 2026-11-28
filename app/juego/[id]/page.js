@@ -5,6 +5,7 @@ import { asegurarEsquema } from "@/lib/esquema";
 import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
+import { optimizar } from "@/lib/imagen";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,10 @@ export default async function Juego({ params, searchParams }) {
     where proveedor = 'central_one' and central_one_family_id = ${familia}
   `;
 
+  const [logo] = await sql`
+    select imagen_url from juegos_imagen where familia_id = ${familia}
+  `;
+
   const paquetes = await sql`
     select slug, nombre, precio::float as precio
     from productos
@@ -69,9 +74,18 @@ export default async function Juego({ params, searchParams }) {
           ← Inicio
         </Link>
 
-        <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-marino">
-          {nombre}
-        </h1>
+        <div className="mt-3 flex items-center gap-3">
+          {logo && logo.imagen_url && (
+            <img
+              src={optimizar(logo.imagen_url, 160)}
+              alt={nombre}
+              className="h-14 w-14 rounded-xl border border-neutral-200 bg-white object-contain p-1"
+            />
+          )}
+          <h1 className="text-2xl font-extrabold tracking-tight text-marino">
+            {nombre}
+          </h1>
+        </div>
 
         {regiones.length > 1 && (
           <div className="mt-4 flex flex-wrap gap-2">

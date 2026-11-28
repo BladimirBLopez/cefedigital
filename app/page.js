@@ -200,7 +200,9 @@ export default async function Home({ searchParams }) {
              max(central_one_family_name) as nombre,
              mode() within group (order by central_one_category) as categoria,
              (min(precio) filter (where precio > 0))::float as precio,
-             count(*)::int as paquetes
+             count(*)::int as paquetes,
+             (select imagen_url from juegos_imagen ji
+              where ji.familia_id = productos.central_one_family_id) as imagen
       from productos
       where proveedor = 'central_one' and activo and proveedor_disponible = true
         and central_one_family_id is not null

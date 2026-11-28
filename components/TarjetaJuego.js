@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { optimizar } from "@/lib/imagen";
 
 export default function TarjetaJuego({ j }) {
   const precio = Number(j.precio);
@@ -13,7 +14,17 @@ export default function TarjetaJuego({ j }) {
       className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-intenso/25 bg-marino shadow-md transition-all duration-200 hover:border-electrico hover:shadow-lg"
     >
       <div className="flex aspect-[4/3] w-full items-center justify-center bg-white">
-        <span className="text-5xl font-extrabold text-intenso">{inicial}</span>
+        {j.imagen ? (
+          <img
+            src={optimizar(j.imagen, 480)}
+            alt={j.nombre}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-contain p-2"
+          />
+        ) : (
+          <span className="text-5xl font-extrabold text-intenso">{inicial}</span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col px-3 pb-3 pt-3">
