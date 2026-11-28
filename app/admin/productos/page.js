@@ -7,6 +7,7 @@ import { estadoVence } from "@/lib/vence";
 import { publicarLista } from "../actions";
 import { publicarJuego, ocultarJuego } from "../acciones-juegos";
 import Interruptor from "@/components/Interruptor";
+import PrecioPaquete from "@/components/PrecioPaquete";
 import EstrellaDestacado from "@/components/EstrellaDestacado";
 
 export const dynamic = "force-dynamic";
@@ -106,7 +107,8 @@ export default async function Productos({ searchParams }) {
              p.central_one_family_id as familia,
              coalesce(p.central_one_region, 'General') as region,
              p.precio::float as precio,
-             p.costo_proveedor_bs_central_one::float as costo
+             p.costo_proveedor_bs_central_one::float as costo,
+             p.precio_sugerido::float as sugerido
       from productos p
       where p.proveedor = 'central_one'
         and p.central_one_family_id in (select jsonb_array_elements_text(${idsJuegos}::jsonb))
@@ -324,18 +326,14 @@ export default async function Productos({ searchParams }) {
                       <div key={region} className="pt-2">
                         <p className="text-xs font-bold uppercase text-neutral-500">{region} · {items.length}</p>
                         {items.map((x) => (
-                          <div key={x.id} className="flex items-center gap-2 border-b border-neutral-100 py-2">
-                            <div className="min-w-0 flex-1">
-                              <Link href={`/admin/productos/${x.id}`} className="block truncate text-xs font-medium text-marino hover:underline">
+                          <div key={x.id} className="border-b border-neutral-100 py-2">
+                            <div className="flex items-center gap-2">
+                              <Link href={`/admin/productos/${x.id}`} className="block min-w-0 flex-1 truncate text-xs font-medium text-marino hover:underline">
                                 {x.nombre}
                               </Link>
-                              <p className="text-[11px] text-neutral-500">
-                                Costo Bs {bs(x.costo)} · Precio Bs {bs(x.precio)}
-                                {x.costo > 0 ? " · Gana Bs " + bs(x.precio - x.costo) : ""}
-                                {x.proveedor_disponible ? "" : " · Sin stock"}
-                              </p>
+                              <Interruptor id={x.id} activo={x.activo} />
                             </div>
-                            <Interruptor id={x.id} activo={x.activo} />
+                            <PrecioPaquete id={x.id} precio={x.precio} costo={x.costo || 0} sugerido={x.sugerido || 0} sinStock={!x.proveedor_disponible} />
                           </div>
                         ))}
                       </div>
