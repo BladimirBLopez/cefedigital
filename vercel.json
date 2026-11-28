@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/streamzone",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/central-one",
+      "schedule": "10 10 * * *"
     }
   ]
 }

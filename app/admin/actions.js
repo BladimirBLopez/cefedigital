@@ -276,7 +276,7 @@ export async function editarProducto(formData) {
   await sql`
     update productos
     set nombre = ${p.nombre}, categoria = ${p.categoria}, descripcion = ${p.descripcion},
-        precio = ${p.precio}, precio_manual = case when proveedor = 'streamzone' and precio is distinct from ${p.precio} then abs(${p.precio} - coalesce(precio_sugerido, 0)) > 0.001 else precio_manual end, imagen_url = ${imagen}, instrucciones = ${p.instrucciones},
+        precio = ${p.precio}, precio_manual = case when proveedor in ('streamzone', 'central_one') and precio is distinct from ${p.precio} then abs(${p.precio} - coalesce(precio_sugerido, 0)) > 0.001 else precio_manual end, imagen_url = ${imagen}, instrucciones = ${p.instrucciones},
         tipo = ${p.tipo},
         tipo_manual = case
           when proveedor is not null and (
