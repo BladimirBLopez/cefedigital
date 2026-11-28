@@ -2,32 +2,27 @@ import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import Link from "next/link";
 import AdminNav from "@/components/AdminNav";
-import SubirFoto from "@/components/SubirFoto";
-import CamposProducto from "@/components/CamposProducto";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
-import { crearProducto, publicarLista } from "../actions";
+import { publicarLista } from "../actions";
 import { publicarJuego, ocultarJuego } from "../acciones-juegos";
 import Interruptor from "@/components/Interruptor";
 import EstrellaDestacado from "@/components/EstrellaDestacado";
-import SwitchVenta from "@/components/SwitchVenta";
-
 
 export const dynamic = "force-dynamic";
 
 const campo = "w-full rounded-xl bg-neutral-100 border border-neutral-300 px-4 py-3 outline-none focus:border-acento";
 const TIPOS = { clave: "Clave", cuenta: "Cuenta", recarga: "Recarga" };
 const ERRORES = {
-  nombre: "Falta el nombre",
-  precio: "El precio no es válido",
-  vence: "La fecha de vencimiento no es válida",
-  foto: "No se pudo subir la foto (máx. 4 MB)",
   pedidos: "Ese producto ya tiene pedidos: no se borra para no perder tus ventas. Ocúltalo con el interruptor.",
   borrar: "No se pudo borrar. Intenta otra vez.",
-  planes: "Escribe al menos un precio para la cuenta.",
-  planesdb: "No se pudieron guardar los planes. No se creó nada, intenta otra vez.",
-  repetidas: "Repetiste un plan con la misma modalidad, pantallas y duración. Cambia uno.",
 };
+const PROV = {
+  streamzone: { texto: "StreamZone", clase: "bg-sky-100 text-sky-700" },
+  central_one: { texto: "Central One", clase: "bg-violet-100 text-violet-700" },
+};
+const PROPIO = { texto: "Propio", clase: "bg-emerald-100 text-emerald-700" };
+const bs = (n) => Number(n || 0).toFixed(2);
 
 export default async function Productos({ searchParams }) {
   await requireAdmin();
@@ -48,7 +43,10 @@ export default async function Productos({ searchParams }) {
   const [conteo] = await sql`
     select count(*)::int as total,
            count(*) filter (where activo)::int as venta,
-           count(*) filter (where not activo)::int as oculto
+           count(*) filter (where not activo)::int as oculto,
+           count(*) filter (where proveedor is null)::int as propio,
+           count(*) filter (where proveedor = 'streamzone')::int as streamzone,
+           count(distinct central_one_family_id) filter (where proveedor = 'central_one')::int as central_one
     from productos`;
   const conVence = await sql`select vence::text as vence from productos where vence is not null`;
   const categoriasProductos = await sql`
@@ -122,6 +120,7 @@ export default async function Productos({ searchParams }) {
   }
 
   const publicables = modoJuegos ? [] : lista.filter((p) => !p.activo && p.precio > 0 && (!p.proveedor || p.proveedor_disponible));
+
   const hrefProv = (v) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
@@ -141,7 +140,6 @@ export default async function Productos({ searchParams }) {
     const t = u.toString();
     return "/admin/productos" + (t ? "?" + t : "");
   };
-
   const href = (e) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
@@ -156,7 +154,7 @@ export default async function Productos({ searchParams }) {
   `;
   const categorias = [...new Set([
     ...categoriasRegistradas.map((c) => c.categoria),
-    ...categoriasProductos.map((c) => c.categoria)
+    ...categoriasProductos.map((c) => c.categoria),
   ])].filter(Boolean).sort((a, b) => a.localeCompare(b, "es"));
   const hrefCat = (c) => {
     const u = new URLSearchParams();
@@ -168,103 +166,94 @@ export default async function Productos({ searchParams }) {
     const t = u.toString();
     return "/admin/productos" + (t ? "?" + t : "");
   };
+
   const chips = [
     ["todos", "Todos"],
     ["venta", "A la venta"],
     ["vencen", "Por vencer"],
     ["oculto", "Ocultos"],
   ];
+  const tabs = [
+    ["todos", "Todos", stats.total],
+    ["propio", "Propios", conteo.propio],
+    ["streamzone", "StreamZone", conteo.streamzone],
+    ["central_one", "Central One", conteo.central_one],
+  ];
+  const pill = (on) =>
+    "shrink-0 rounded-full px-3 py-1 text-sm border " +
+    (on ? "bg-marino text-white border-marino" : "bg-white border-neutral-300 text-neutral-600");
 
   return (
     <>
       <AdminNav />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold">Productos</h1>
-          <Link href="/admin/registro?f=producto" className="text-xs text-marino hover:underline">Ver historial</Link>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">Productos</h1>
+            <Link href="/admin/registro?f=producto" className="text-xs text-marino hover:underline">Ver historial</Link>
+          </div>
+          <Link href="/admin/productos/nuevo" className="rounded-xl bg-intenso px-4 py-2 text-sm font-semibold text-white hover:bg-marino">+ Nuevo</Link>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="mb-4 grid grid-cols-4 gap-2">
           {[
             ["Total", stats.total, ""],
-            ["A la venta", stats.venta, "text-marino"],
+            ["A la venta", stats.venta, "text-emerald-600"],
+            ["Ocultos", stats.oculto, ""],
             ["Por vencer", stats.vencen, stats.vencen ? "text-amber-600" : ""],
           ].map(([t, n, c]) => (
-            <div key={t} className="rounded-2xl bg-white border border-neutral-200 p-3">
-              <p className="text-xs text-neutral-500">{t}</p>
-              <p className={"text-2xl font-semibold " + c}>{n}</p>
+            <div key={t} className="rounded-2xl border border-neutral-200 bg-white p-2 text-center">
+              <p className={"text-lg font-semibold " + c}>{n}</p>
+              <p className="text-[10px] text-neutral-500">{t}</p>
             </div>
           ))}
         </div>
 
-        <Link href="/admin/productos/nuevo" className="mb-5 block rounded-xl bg-intenso hover:bg-marino text-white text-center font-semibold py-3">+ Nuevo producto</Link>
-        {["pedidos", "borrar"].includes(sp?.error) && <p className="text-sm text-red-600 mb-3">{ERRORES[sp.error]}</p>}
+        {["pedidos", "borrar"].includes(sp?.error) && (
+          <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ERRORES[sp.error]}</p>
+        )}
 
-        <form method="get" className="flex gap-2 mb-3">
-          {estado !== "todos" && <input type="hidden" name="estado" value={estado} />}
-          {prov !== "todos" && <input type="hidden" name="prov" value={prov} />}
-          {cats.length > 0 && <input type="hidden" name="cat" value={cats.join("|")} />}
-          <input name="q" defaultValue={q} placeholder="Buscar producto o categoría" className={campo + " !py-2"} />
-          <button className="rounded-xl bg-marino text-white px-4 text-sm">Buscar</button>
-        </form>
-
-        <div className="flex gap-2 overflow-x-auto mb-2">
-          {[["todos", "Todos los proveedores"], ["central_one", "Central One"], ["streamzone", "StreamZone"], ["propio", "Propios"]].map(([v, t]) => (
+        <div className="mb-3 flex gap-1 overflow-x-auto rounded-2xl bg-neutral-100 p-1">
+          {tabs.map(([v, t, n]) => (
             <Link
               key={v}
               href={hrefProv(v)}
               className={
-                "shrink-0 rounded-full px-3 py-1 text-sm border " +
-                (prov === v ? "bg-intenso text-white border-intenso" : "bg-white border-neutral-300 text-neutral-600")
+                "flex-1 shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-center text-sm font-medium " +
+                (prov === v ? "bg-white text-marino shadow-sm" : "text-neutral-500")
               }
             >
-              {t}
+              {t} <span className="text-xs opacity-70">{n}</span>
             </Link>
           ))}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto mb-4">
+        <form method="get" className="mb-3 flex gap-2">
+          {estado !== "todos" && <input type="hidden" name="estado" value={estado} />}
+          {prov !== "todos" && <input type="hidden" name="prov" value={prov} />}
+          {cats.length > 0 && <input type="hidden" name="cat" value={cats.join("|")} />}
+          <input name="q" defaultValue={q} placeholder="Buscar producto o categoría" className={campo + " !py-2"} />
+          <button className="rounded-xl bg-marino px-4 text-sm text-white">Buscar</button>
+        </form>
+
+        <div className="mb-3 flex gap-2 overflow-x-auto">
           {chips.map(([e, t]) => (
-            <Link
-              key={e}
-              href={href(e)}
-              className={
-                "shrink-0 rounded-full px-3 py-1 text-sm border " +
-                (estado === e ? "bg-marino text-white border-marino" : "bg-white border-neutral-300 text-neutral-600")
-              }
-            >
-              {t}
-            </Link>
+            <Link key={e} href={href(e)} className={pill(estado === e)}>{t}</Link>
           ))}
         </div>
 
         {categorias.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs text-neutral-500 mb-1">Categorías (marca las que quieras ver)</p>
-            <div className="flex gap-2 overflow-x-auto">
-              <Link
-                href={hrefCat(null)}
-                className={
-                  "shrink-0 rounded-full px-3 py-1 text-sm border " +
-                  (cats.length === 0 ? "bg-marino text-white border-marino" : "bg-white border-neutral-300 text-neutral-600")
-                }
-              >
-                Todas
-              </Link>
+          <details className="mb-4 rounded-2xl border border-neutral-200 bg-white" open={cats.length > 0}>
+            <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-neutral-600">
+              Categorías{cats.length > 0 ? " (" + cats.length + " marcadas)" : ""}
+            </summary>
+            <div className="flex flex-wrap gap-2 px-3 pb-3">
+              <Link href={hrefCat(null)} className={pill(cats.length === 0)}>Todas</Link>
               {categorias.map((c) => (
-                <Link
-                  key={c}
-                  href={hrefCat(c)}
-                  className={
-                    "shrink-0 rounded-full px-3 py-1 text-sm border " +
-                    (cats.includes(c) ? "bg-marino text-white border-marino" : "bg-white border-neutral-300 text-neutral-600")
-                  }
-                >
-                  {c}
-                </Link>
+                <Link key={c} href={hrefCat(c)} className={pill(cats.includes(c))}>{c}</Link>
               ))}
             </div>
-          </div>
+          </details>
         )}
 
         {sp?.publicados != null && (
@@ -274,7 +263,7 @@ export default async function Productos({ searchParams }) {
         )}
 
         {publicables.length > 0 && (
-          <form action={publicarLista} className="mb-4 rounded-2xl border border-neutral-200 bg-white p-3 space-y-2">
+          <form action={publicarLista} className="mb-4 space-y-2 rounded-2xl border border-neutral-200 bg-white p-3">
             {publicables.map((p) => <input key={p.id} type="hidden" name="ids" value={p.id} />)}
             <input type="hidden" name="volver" value={hrefPag(pagina)} />
             <label className="flex items-center gap-2 text-xs text-neutral-600">
@@ -291,8 +280,11 @@ export default async function Productos({ searchParams }) {
           <ul className="space-y-3">
             {juegosAdmin.length === 0 && <li className="text-sm text-neutral-500">No hay juegos con ese filtro.</li>}
             {juegosAdmin.map((g) => (
-              <li key={g.id} className="rounded-2xl bg-white border border-neutral-200 p-3 space-y-2">
-                <p className="font-medium text-marino">{g.nombre}</p>
+              <li key={g.id} className="space-y-2 rounded-2xl border border-neutral-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 font-medium text-marino">{g.nombre}</p>
+                  <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">Central One</span>
+                </div>
                 <p className="text-xs text-neutral-500">
                   {g.total} paquetes · {g.publicados} publicados{g.desde ? " · desde Bs " + g.desde.toFixed(2) : ""}
                 </p>
@@ -338,7 +330,8 @@ export default async function Productos({ searchParams }) {
                                 {x.nombre}
                               </Link>
                               <p className="text-[11px] text-neutral-500">
-                                Costo Bs {Number(x.costo || 0).toFixed(2)} · Precio Bs {Number(x.precio || 0).toFixed(2)}
+                                Costo Bs {bs(x.costo)} · Precio Bs {bs(x.precio)}
+                                {x.costo > 0 ? " · Gana Bs " + bs(x.precio - x.costo) : ""}
                                 {x.proveedor_disponible ? "" : " · Sin stock"}
                               </p>
                             </div>
@@ -353,65 +346,62 @@ export default async function Productos({ searchParams }) {
             ))}
           </ul>
         )}
-        <ul className="space-y-3">
+
+        <ul className="space-y-2">
           {!modoJuegos && lista.length === 0 && <li className="text-sm text-neutral-500">No hay productos con ese filtro.</li>}
           {(modoJuegos ? [] : lista).map((p) => {
-            const bajo = false;
             const ev = estadoVence(p.vence);
+            const et = PROV[p.proveedor] || PROPIO;
+            const costo =
+              p.proveedor === "streamzone" ? p.costo_proveedor_bs
+              : p.proveedor === "central_one" ? p.costo_proveedor_bs_central_one
+              : null;
+            const gan = costo > 0 ? p.precio - costo : null;
+            const sinStock = p.proveedor && !p.proveedor_disponible;
             return (
-              <li key={p.id} className="rounded-2xl bg-white border border-neutral-200 p-3 flex items-center gap-3">
-                <div className="h-16 w-16 shrink-0 rounded-xl bg-neutral-100 overflow-hidden flex items-center justify-center text-neutral-400 text-xs">
-                  {p.imagen_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imagen_url} alt="" loading="lazy" className="h-full w-full object-contain" />
-                  ) : (
-                    "Sin foto"
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <Link href={`/admin/productos/${p.id}`} className="block font-medium truncate text-marino hover:underline">
-                    {p.nombre}
-                  </Link>
-                  <p className="text-xs text-neutral-500 truncate">
-                    {p.categoria || "Sin categoría"} · {TIPOS[p.tipo] || "Clave"}
-                  {p.proveedor === "streamzone" && (
-                    <span className="block text-[11px] text-neutral-500">
-                      StreamZone · Costo Bs {Number(p.costo_proveedor_bs || 0).toFixed(4)} · Sugerido Bs {Number(p.precio_sugerido || 0).toFixed(2)} ·
-                      {p.precio_manual ? "Precio manual protegido" : `Margen automático ${Number(p.margen_porcentaje || 20)}%`} ·
-                      {p.proveedor_disponible ? `Stock: ${p.stock_proveedor ?? "Disponible"}` : "Sin stock"}
-                    </span>
-                  )}
-{p.proveedor === "central_one" && (
-                    <span className="block text-[11px] text-neutral-500">
-                      Central One · Costo Bs {Number(p.costo_proveedor_bs_central_one || 0).toFixed(4)} · Sugerido Bs {Number(p.precio_sugerido || 0).toFixed(2)} ·
-                      {p.precio_manual ? "Precio manual protegido" : `Margen automático ${Number(p.margen_porcentaje || 20)}%`} ·
-                      {p.proveedor_disponible ? `Stock: ${p.stock_proveedor ?? "Disponible"}` : "Sin stock"}
-                    </span>
-                  )}
-                  </p>
-                  <p className="text-sm font-semibold">
-                    Bs {p.precio.toFixed(2)}{" "}
-                    <span className={"text-xs font-normal " + (bajo ? "text-red-600" : "text-neutral-500")}>
-                      {p.tipo === "recarga" ? "· Bajo pedido" : "· Entrega por WhatsApp"}
-                    </span>
-                  </p>
-                  {ev.clave !== "sin" && (
-                    <span className={"inline-block mt-1 text-xs rounded-full px-2 py-0.5 " + ev.clase}>{ev.texto}</span>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Link href={`/admin/productos/${p.id}`} className="rounded-full border border-marino px-3 py-1 text-xs font-semibold text-marino hover:bg-marino hover:text-white">Editar</Link>
-                  <div className="flex items-center gap-2">
-                    <EstrellaDestacado id={p.id} destacado={p.destacado} />
-                    <Interruptor id={p.id} activo={p.activo} />
+              <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3">
+                <Link href={`/admin/productos/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 text-[10px] text-neutral-400">
+                    {p.imagen_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imagen_url} alt="" loading="lazy" className="h-full w-full object-contain" />
+                    ) : (
+                      "Sin foto"
+                    )}
                   </div>
-                  
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-marino">{p.nombre}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                      <span className={"rounded-full px-1.5 py-0.5 text-[10px] font-medium " + et.clase}>{et.texto}</span>
+                      <span className="truncate text-[11px] text-neutral-500">{p.categoria || "Sin categoría"} · {TIPOS[p.tipo] || "Clave"}</span>
+                    </div>
+                    <p className="mt-0.5 text-sm font-semibold">
+                      Bs {bs(p.precio)}
+                      {gan !== null && (
+                        <span className={"ml-2 text-[11px] font-normal " + (gan >= 0 ? "text-emerald-600" : "text-red-600")}>
+                          costo {bs(costo)} · gana {bs(gan)}
+                        </span>
+                      )}
+                    </p>
+                    {(sinStock || ev.clave !== "sin" || p.precio_manual) && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {sinStock && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">Sin stock</span>}
+                        {ev.clave !== "sin" && <span className={"rounded-full px-2 py-0.5 text-[10px] " + ev.clase}>{ev.texto}</span>}
+                        {p.precio_manual && p.proveedor && <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Precio manual</span>}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+                <div className="flex shrink-0 flex-col items-center gap-2">
+                  <Interruptor id={p.id} activo={p.activo} />
+                  <EstrellaDestacado id={p.id} destacado={p.destacado} />
                 </div>
               </li>
             );
           })}
         </ul>
-              {estado !== "vencen" && (pagina > 1 || hayMas || hayMasJuegos) && (
+
+        {estado !== "vencen" && (pagina > 1 || hayMas || hayMasJuegos) && (
           <nav className="mt-4 flex items-center justify-between text-sm">
             {pagina > 1 ? <Link href={hrefPag(pagina - 1)} className="text-marino hover:underline">← Anterior</Link> : <span />}
             <span className="text-neutral-500">Página {pagina}</span>
