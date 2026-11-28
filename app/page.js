@@ -18,10 +18,34 @@ import {
   FiClock,
   FiShoppingBag,
   FiCheckCircle,
+  FiCreditCard,
   FiLayers
 } from "react-icons/fi";
 
 export const dynamic = "force-dynamic";
+
+async function traerProductos({ cat = null, q = null, soloDestacados = false, limite = 8, offset = 0 }) {
+  return await sql`
+    select p.slug, p.nombre, p.categoria, p.imagen_url, p.tipo, p.campo_cliente,
+      coalesce(
+        (select min(pl.precio) from planes pl
+         where pl.producto_id = p.id and pl.activo),
+        p.precio
+      )::float as precio,
+      exists (
+        select 1 from planes pl
+        where pl.producto_id = p.id and pl.activo
+      ) as con_planes
+    from productos p
+    where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
+      and p.proveedor is distinct from 'central_one'
+      and (${cat}::text is null or p.categoria = ${cat})
+      and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
+      and (${soloDestacados}::boolean is not true or p.destacado)
+    order by p.id desc
+    limit ${limite} offset ${offset}
+  `;
+}
 
 function Fila({ titulo, items, verTodos, Icono = FiGrid }) {
   if (!items || items.length === 0) return null;
@@ -107,94 +131,48 @@ export default async function Home({ searchParams }) {
   let juegos = [];
 
   if (catalogo) {
-    const prods = await sql`
-      select p.slug, p.nombre, p.categoria, p.imagen_url,
-        coalesce(
-          (select min(pl.precio) from planes pl
-           where pl.producto_id = p.id and pl.activo),
-          p.precio
-        )::float as precio,
-        exists (
-          select 1 from planes pl
-          where pl.producto_id = p.id and pl.activo
-        ) as con_planes
-      from productos p
-      where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
-        and (${cat}::text is null or p.categoria = ${cat})
-        and p.proveedor is distinct from 'central_one'
-        and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
-      order by p.id desc
-      limit ${POR + 1} offset ${(pag - 1) * POR}
-    `;
+      const prods = await traerProductos({ cat, q, limite: POR + 1, offset: (pag - 1) * POR });
+      hayMas = prods.length > POR;
+      lista = prods.slice(0, POR);
+    } else {
+      destacados = await traerProductos({ soloDestacados: true, limite: 8 });
+      const vistos = new Set(destacados.map((p) => p.slug));
 
-    hayMas = prods.length > POR;
-    lista = prods.slice(0, POR);
-  } else {
-    destacados = await sql`
-      select p.slug, p.nombre, p.categoria, p.imagen_url,
-        coalesce(
-          (select min(pl.precio) from planes pl
-           where pl.producto_id = p.id and pl.activo),
-          p.precio
-        )::float as precio,
-        exists (
-          select 1 from planes pl
-          where pl.producto_id = p.id and pl.activo
-        ) as con_planes
-      from productos p
-      where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.destacado
-        and p.proveedor is distinct from 'central_one'
-      order by p.id desc
-      limit 8
-    `;
+      const recientes = await traerProductos({ limite: 24 });
+      novedades = recientes.filter((p) => !vistos.has(p.slug)).slice(0, 8);
+      novedades.forEach((p) => vistos.add(p.slug));
 
-    novedades = await sql`
-      select p.slug, p.nombre, p.categoria, p.imagen_url,
-        coalesce(
-          (select min(pl.precio) from planes pl
-           where pl.producto_id = p.id and pl.activo),
-          p.precio
-        )::float as precio,
-        exists (
-          select 1 from planes pl
-          where pl.producto_id = p.id and pl.activo
-        ) as con_planes
-      from productos p
-      where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
-        and p.proveedor is distinct from 'central_one'
-      order by p.id desc
-      limit 8
-    `;
+      const filas = await sql`
+        select * from (
+          select p.slug, p.nombre, p.categoria, p.imagen_url, p.tipo, p.campo_cliente,
+            coalesce(
+              (select min(pl.precio) from planes pl
+               where pl.producto_id = p.id and pl.activo),
+              p.precio
+            )::float as precio,
+            exists (
+              select 1 from planes pl
+              where pl.producto_id = p.id and pl.activo
+            ) as con_planes,
+            row_number() over (
+              partition by p.categoria order by p.id desc
+            ) as rn
+          from productos p
+          where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.categoria is not null
+            and p.proveedor is distinct from 'central_one'
+        ) t
+        where rn <= 24
+        order by categoria, rn
+      `;
 
-    const filas = await sql`
-      select * from (
-        select p.slug, p.nombre, p.categoria, p.imagen_url,
-          coalesce(
-            (select min(pl.precio) from planes pl
-             where pl.producto_id = p.id and pl.activo),
-            p.precio
-          )::float as precio,
-          exists (
-            select 1 from planes pl
-            where pl.producto_id = p.id and pl.activo
-          ) as con_planes,
-          row_number() over (
-            partition by p.categoria order by p.id desc
-          ) as rn
-        from productos p
-        where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.categoria is not null
-          and p.proveedor is distinct from 'central_one'
-      ) t
-      where rn <= 8
-      order by categoria, rn
-    `;
-
-    for (const f of filas) {
-      (porCat[f.categoria] ||= []).push(f);
+      for (const f of filas) {
+        if (vistos.has(f.slug)) continue;
+        const arr = (porCat[f.categoria] ||= []);
+        if (arr.length < 8) arr.push(f);
+      }
     }
-  }
 
-  if (!cat && pag === 1) {
+    if (!cat && pag === 1) {
     juegos = await sql`
       select central_one_family_id as id,
              max(central_one_family_name) as nombre,
@@ -295,9 +273,9 @@ export default async function Home({ searchParams }) {
 
             <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
               {[
-                [FiZap, "Compra fácil"],
-                [FiMessageCircle, "Atención directa"],
-                [FiShield, "Garantía disponible"]
+                [FiCreditCard, "Pago por QR"],
+                [FiClock, "Atención 24/7"],
+                [FiShield, "Garantía 7 días"]
               ].map(([Icono, texto]) => (
                 <div
                   key={texto}
@@ -315,43 +293,19 @@ export default async function Home({ searchParams }) {
           </>
         )}
 
-        <section className="mt-7">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-extrabold text-marino">
-              <FiSearch className="text-intenso" />
-              Busca lo que necesitas
-            </h2>
-          </div>
-
-          <form
-            method="GET"
-            action="/"
-            className="flex gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 p-2 shadow-sm"
-          >
-            {cat && (
-              <input type="hidden" name="cat" value={cat} />
-            )}
-
-            <div className="relative min-w-0 flex-1">
-              <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-
-              <input
-                name="q"
-                aria-label="Buscar productos"
-                defaultValue={q || ""}
-                placeholder="Buscar productos..."
-                className="w-full rounded-xl border-0 bg-white py-3 pl-9 pr-3 text-sm text-marino shadow-sm outline-none ring-1 ring-neutral-100 focus:ring-2 focus:ring-intenso"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="rounded-xl bg-intenso px-4 text-sm font-bold text-white transition hover:bg-marino sm:px-6"
-            >
-              Buscar
-            </button>
-          </form>
-        </section>
+        {!catalogo && (
+          <section className="mt-6 rounded-2xl border border-neutral-100 bg-neutral-50 p-4">
+            <h2 className="text-sm font-extrabold text-marino">Cómo comprar</h2>
+            <ol className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-semibold leading-tight text-marino sm:text-xs">
+              {["Elige tu producto", "Paga por QR", "Recibe por WhatsApp"].map((t, i) => (
+                <li key={t} className="flex flex-col items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-intenso text-sm font-bold text-white">{i + 1}</span>
+                  {t}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         {cats.length > 0 && (
           <section className="mt-8">

@@ -164,7 +164,7 @@ export default function AccionTarjeta({ p }) {
           : "Agregar al carrito"
       }
       className="
-        flex h-11 w-11 shrink-0
+        flex h-10 w-full shrink-0 gap-1.5 text-xs font-bold
         items-center justify-center
         rounded-xl border border-white/25
         bg-white/10 text-white
@@ -182,7 +182,10 @@ export default function AccionTarjeta({ p }) {
           "
         />
       ) : (
-        <FiShoppingCart className="h-5 w-5" />
+        <>
+            <FiShoppingCart className="h-4 w-4" />
+            <span>{p.con_planes ? "Elegir plan" : p.tipo === "recarga" && p.campo_cliente ? "Elegir" : "Agregar"}</span>
+          </>
       )}
     </button>
   );
