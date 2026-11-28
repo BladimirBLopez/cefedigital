@@ -5,6 +5,7 @@ import { obtenerAjustes } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import TarjetaProducto from "@/components/TarjetaProducto";
+import TarjetaJuego from "@/components/TarjetaJuego";
 import { iconoCategoria } from "@/lib/iconosCategoria";
 import {
   FiZap,
@@ -57,6 +58,23 @@ function Fila({ titulo, items, verTodos, Icono = FiGrid }) {
   );
 }
 
+function FilaJuegos({ juegos }) {
+  if (!juegos || juegos.length === 0) return null;
+
+  return (
+    <section className="mt-9">
+      <h2 className="text-lg font-extrabold tracking-tight text-marino">
+        Recargas de juegos
+      </h2>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+        {juegos.map((j) => (
+          <TarjetaJuego key={j.id} j={j} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default async function Home({ searchParams }) {
   await asegurarEsquema();
   const sp = await searchParams;
@@ -86,6 +104,7 @@ export default async function Home({ searchParams }) {
   let destacados = [];
   let novedades = [];
   let porCat = {};
+  let juegos = [];
 
   if (catalogo) {
     const prods = await sql`
@@ -102,6 +121,7 @@ export default async function Home({ searchParams }) {
       from productos p
       where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
         and (${cat}::text is null or p.categoria = ${cat})
+        and p.proveedor is distinct from 'central_one'
         and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
       order by p.id desc
       limit ${POR + 1} offset ${(pag - 1) * POR}
@@ -123,6 +143,7 @@ export default async function Home({ searchParams }) {
         ) as con_planes
       from productos p
       where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.destacado
+        and p.proveedor is distinct from 'central_one'
       order by p.id desc
       limit 8
     `;
@@ -140,6 +161,7 @@ export default async function Home({ searchParams }) {
         ) as con_planes
       from productos p
       where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
+        and p.proveedor is distinct from 'central_one'
       order by p.id desc
       limit 8
     `;
@@ -161,6 +183,7 @@ export default async function Home({ searchParams }) {
           ) as rn
         from productos p
         where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.categoria is not null
+          and p.proveedor is distinct from 'central_one'
       ) t
       where rn <= 8
       order by categoria, rn
@@ -169,6 +192,23 @@ export default async function Home({ searchParams }) {
     for (const f of filas) {
       (porCat[f.categoria] ||= []).push(f);
     }
+  }
+
+  if (!cat && pag === 1) {
+    juegos = await sql`
+      select central_one_family_id as id,
+             max(central_one_family_name) as nombre,
+             mode() within group (order by central_one_category) as categoria,
+             (min(precio) filter (where precio > 0))::float as precio,
+             count(*)::int as paquetes
+      from productos
+      where proveedor = 'central_one' and activo and proveedor_disponible = true
+        and central_one_family_id is not null
+        and (${q}::text is null or central_one_family_name ilike '%' || ${q} || '%')
+      group by central_one_family_id
+      order by count(*) desc
+      limit 24
+    `;
   }
 
   const href = (n) => {
@@ -409,7 +449,8 @@ export default async function Home({ searchParams }) {
               </Link>
             </div>
 
-            {lista.length === 0 ? (
+            {juegos.length > 0 && <FilaJuegos juegos={juegos} />}
+            {lista.length === 0 && juegos.length === 0 ? (
               <div className="mt-5 rounded-2xl border border-neutral-200 bg-neutral-50 px-5 py-10 text-center">
                 <FiSearch className="mx-auto h-9 w-9 text-neutral-400" />
                 <h3 className="mt-3 font-bold text-marino">
@@ -465,6 +506,8 @@ export default async function Home({ searchParams }) {
           </section>
         ) : (
           <>
+            <FilaJuegos juegos={juegos} />
+
             <Fila
               titulo="Productos destacados"
               items={destacados}
