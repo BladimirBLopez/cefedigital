@@ -27,7 +27,7 @@ const GRUPOS = [
       { href: "/admin/vencimientos", texto: "Vencimientos", icono: FiClock },
     ],
   },
-  { titulo: "Proveedores", enlaces: [{ href: "/admin/proveedores/streamzone", texto: "StreamZone", icono: FiLink }] },
+  { titulo: "Proveedores", enlaces: [{ href: "/admin/proveedores/streamzone", texto: "StreamZone", icono: FiLink }, { href: "/admin/proveedores/central-one", texto: "Central One", icono: FiLink }] },
   { titulo: "Sistema", enlaces: [{ href: "/admin/ajustes", texto: "Ajustes", icono: FiSettings }] },
 ];
 const TODOS = GRUPOS.flatMap((g) => g.enlaces);

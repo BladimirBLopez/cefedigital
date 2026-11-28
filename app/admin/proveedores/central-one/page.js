@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { asegurarEsquema } from "@/lib/esquema";
 import { obtenerBalanceCentralOne } from "@/lib/central-one";
 import AdminNav from "@/components/AdminNav";
-import { sincronizarCentralOneAction } from "./actions";
+import { sincronizarCentralOneAction, comprobarPermisosCentralOneAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -120,6 +120,32 @@ export default async function CentralOne({ searchParams }) {
             <p>Tipo de cambio USD/Bs: {sync?.tipo_cambio ?? "Sin registro"}</p>
             <p>Fuente: {sync?.fuente_tasa || "Sin registro"}</p>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-3">
+          <h2 className="font-semibold text-marino">Permisos de la llave</h2>
+
+          <p className="text-sm text-neutral-600">
+            Comprueba lectura de saldo, catálogo y pedidos. No compra nada.
+            El permiso para crear pedidos se confirma en el portal de Central One.
+          </p>
+
+          {sp?.permisos && (
+            <ul className="text-sm space-y-1">
+              {String(sp.permisos).split(",").map((x) => {
+                const [n, e] = x.split("-");
+                const t = { saldo: "Saldo", catalogo: "Catálogo", pedidos: "Consultar pedidos" }[n] || n;
+                const r = e === "ok" ? "✔ Permitido" : e === "denegado" ? "✘ Sin permiso" : "⚠ No se pudo comprobar";
+                return <li key={n}>{t}: {r}</li>;
+              })}
+            </ul>
+          )}
+
+          <form action={comprobarPermisosCentralOneAction}>
+            <button className="w-full rounded-xl border border-intenso px-4 py-3 font-semibold text-intenso hover:bg-neutral-50">
+              Comprobar permisos
+            </button>
+          </form>
         </section>
 
         <section className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-3">
