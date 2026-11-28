@@ -81,6 +81,7 @@ export default async function Productos({ searchParams }) {
   const modoJuegos = prov === "central_one" && !patron && estado !== "vencen" && cats.length === 0;
   let juegosAdmin = [];
   let hayMasJuegos = false;
+  const paquetesPorJuego = {};
 
   if (modoJuegos) {
     const fj = await sql`
@@ -100,6 +101,24 @@ export default async function Productos({ searchParams }) {
       offset ${(pagina - 1) * POR_PAGINA}`;
     hayMasJuegos = fj.length > POR_PAGINA;
     juegosAdmin = fj.slice(0, POR_PAGINA);
+
+    const idsJuegos = JSON.stringify(juegosAdmin.map((g) => String(g.id)));
+    const paq = await sql`
+      select p.id, p.nombre, p.activo, p.proveedor_disponible,
+             p.central_one_family_id as familia,
+             coalesce(p.central_one_region, 'General') as region,
+             p.precio::float as precio,
+             p.costo_proveedor_bs_central_one::float as costo
+      from productos p
+      where p.proveedor = 'central_one'
+        and p.central_one_family_id in (select jsonb_array_elements_text(${idsJuegos}::jsonb))
+        and (${estado} <> 'venta' or p.activo)
+        and (${estado} <> 'oculto' or not p.activo)
+      order by p.central_one_region nulls first, p.precio, p.id
+      limit 2000`;
+    for (const x of paq) {
+      (paquetesPorJuego[x.familia] ||= []).push(x);
+    }
   }
 
   const publicables = modoJuegos ? [] : lista.filter((p) => !p.activo && p.precio > 0 && (!p.proveedor || p.proveedor_disponible));
@@ -299,6 +318,37 @@ export default async function Productos({ searchParams }) {
                     </button>
                   </form>
                 )}
+                <details className="rounded-xl border border-neutral-200">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-marino">
+                    Ver paquetes ({(paquetesPorJuego[g.id] || []).length})
+                  </summary>
+                  <div className="space-y-1 px-3 pb-3">
+                    {Object.entries(
+                      (paquetesPorJuego[g.id] || []).reduce((acc, x) => {
+                        (acc[x.region] ||= []).push(x);
+                        return acc;
+                      }, {})
+                    ).map(([region, items]) => (
+                      <div key={region} className="pt-2">
+                        <p className="text-xs font-bold uppercase text-neutral-500">{region} · {items.length}</p>
+                        {items.map((x) => (
+                          <div key={x.id} className="flex items-center gap-2 border-b border-neutral-100 py-2">
+                            <div className="min-w-0 flex-1">
+                              <Link href={`/admin/productos/${x.id}`} className="block truncate text-xs font-medium text-marino hover:underline">
+                                {x.nombre}
+                              </Link>
+                              <p className="text-[11px] text-neutral-500">
+                                Costo Bs {Number(x.costo || 0).toFixed(2)} · Precio Bs {Number(x.precio || 0).toFixed(2)}
+                                {x.proveedor_disponible ? "" : " · Sin stock"}
+                              </p>
+                            </div>
+                            <Interruptor id={x.id} activo={x.activo} />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </details>
               </li>
             ))}
           </ul>
