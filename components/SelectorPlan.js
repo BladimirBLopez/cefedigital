@@ -34,8 +34,8 @@ function descripcionPlan(plan, mostrarPantallas) {
 }
 
 export default function SelectorPlan({ planes = [] }) {
-  const [duracion, setDuracion] = useState("");
-  const [planId, setPlanId] = useState("");
+  const [duracion, setDuracion] = useState(planes.length === 1 ? String(diasDe(planes[0])) : "");
+  const [planId, setPlanId] = useState(planes.length === 1 ? String(planes[0].id) : "");
 
   const duraciones = [
     ...new Set(
@@ -58,6 +58,15 @@ export default function SelectorPlan({ planes = [] }) {
   );
 
   const unico = planes.length === 1;
+
+    const precioDesde = (d) => {
+      const ps = planes
+        .filter((p) => diasDe(p) === d)
+        .map((p) => Number(p.precio))
+        .filter(Number.isFinite);
+      return ps.length ? Math.min(...ps) : null;
+    };
+    const variasOpciones = (d) => planes.filter((p) => diasDe(p) === d).length > 1;
 
   useEffect(() => {
     window.dispatchEvent(
@@ -171,7 +180,14 @@ export default function SelectorPlan({ planes = [] }) {
                     }
                   >
                     <FiClock className="h-4 w-4" />
-                    {textoDuracion(d)}
+                    <span className="flex flex-col items-start leading-tight">
+                        <span>{textoDuracion(d)}</span>
+                        {precioDesde(d) !== null && (
+                          <span className="text-xs font-bold opacity-80">
+                            {variasOpciones(d) ? "Desde " : ""}Bs {precioDesde(d).toFixed(2)}
+                          </span>
+                        )}
+                      </span>
                   </button>
                 );
               })}

@@ -37,12 +37,12 @@ export default function AgregarCarrito({
   producto,
   planes = []
 }) {
-  const [planId, setPlanId] = useState("");
+  const [planId, setPlanId] = useState(planes.length === 1 ? String(planes[0].id) : "");
 
   const hayPlanes = planes.length > 0;
 
   useEffect(() => {
-    setPlanId("");
+    setPlanId(planes.length === 1 ? String(planes[0].id) : "");
 
     const alSeleccionar = (evento) => {
       setPlanId(
@@ -68,6 +68,7 @@ export default function AgregarCarrito({
   );
 
   const habilitado = !hayPlanes || Boolean(planSeleccionado);
+    const precioBoton = Number(planSeleccionado ? planSeleccionado.precio : producto.precio);
 
   function agregar(e) {
     e.preventDefault();
@@ -285,7 +286,7 @@ export default function AgregarCarrito({
         <FiShoppingCart className="h-5 w-5" />
 
         {habilitado
-          ? "Agregar al carrito"
+          ? (Number.isFinite(precioBoton) ? `Agregar · Bs ${precioBoton.toFixed(2)}` : "Agregar al carrito")
           : "Selecciona tu plan"}
       </button>
 

@@ -6,7 +6,7 @@ export default function PrecioProducto({
   planes = [],
   precioBase = 0
 }) {
-  const [planId, setPlanId] = useState("");
+  const [planId, setPlanId] = useState(planes.length === 1 ? String(planes[0].id) : "");
 
   useEffect(() => {
     const actualizar = (evento) => {

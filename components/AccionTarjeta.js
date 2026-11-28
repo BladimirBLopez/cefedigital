@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FiShoppingCart } from "react-icons/fi";
 import { leerCarrito, guardarCarrito } from "./carritoLocal";
+import { limpiarNombre } from "@/lib/nombre-producto";
 
 const MAX_ITEMS = 10;
 
@@ -60,7 +61,7 @@ export default function AccionTarjeta({ p }) {
       items.push({
         producto_id: Number(producto.id),
         slug: producto.slug,
-        nombre: producto.nombre,
+        nombre: limpiarNombre(producto.nombre),
         imagen: producto.imagen_url || null,
         plan_id: null,
         plan_texto: null,

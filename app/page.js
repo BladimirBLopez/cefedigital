@@ -217,7 +217,7 @@ export default async function Home({ searchParams }) {
         whatsapp={aj.whatsapp}
       />
 
-      <main className="mx-auto max-w-3xl px-4 pb-12 pt-5 sm:pt-7">
+      <main className="mx-auto max-w-6xl px-4 pb-12 pt-5 sm:pt-7">
 
         {!catalogo && (
           <>

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { optimizar } from "@/lib/imagen";
 import { iconoCategoria } from "@/lib/iconosCategoria";
 import AccionTarjeta from "./AccionTarjeta";
+import { limpiarNombre } from "@/lib/nombre-producto";
 
 export default function TarjetaProducto({ p }) {
   const Icono = iconoCategoria(p.categoria);
+  const nombre = limpiarNombre(p.nombre);
 
   const precio = Number(p.precio);
   const tienePrecio =
@@ -25,7 +27,7 @@ export default function TarjetaProducto({ p }) {
       {/* IMAGEN */}
       <Link
         href={`/producto/${p.slug}`}
-        aria-label={`Ver ${p.nombre}`}
+        aria-label={`Ver ${nombre}`}
         className="
           block aspect-[4/3] w-full
           overflow-hidden bg-white
@@ -34,7 +36,7 @@ export default function TarjetaProducto({ p }) {
         {p.imagen_url ? (
           <img
             src={optimizar(p.imagen_url, 480)}
-            alt={p.nombre}
+            alt={nombre}
             loading="lazy"
             decoding="async"
             className="
@@ -76,7 +78,7 @@ export default function TarjetaProducto({ p }) {
             hover:text-cian
           "
         >
-          {p.nombre}
+          {nombre}
         </Link>
 
         {/* PRECIO Y CARRITO */}
@@ -110,7 +112,7 @@ export default function TarjetaProducto({ p }) {
             )}
           </div>
 
-          <AccionTarjeta p={p} />
+          <AccionTarjeta p={{ ...p, nombre }} />
         </div>
       </div>
     </article>

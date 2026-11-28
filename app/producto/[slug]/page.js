@@ -15,6 +15,9 @@ import {
 import SelectorPlan from "@/components/SelectorPlan";
 import AgregarCarrito from "@/components/AgregarCarrito";
 import PrecioProducto from "@/components/PrecioProducto";
+import TarjetaProducto from "@/components/TarjetaProducto";
+import { limpiarNombre } from "@/lib/nombre-producto";
+import { grupoDe } from "@/lib/categorias-tienda";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +36,7 @@ export async function generateMetadata({ params }) {
   }
 
   return {
-    title: p.nombre,
+    title: limpiarNombre(p.nombre),
     description: (
       p.descripcion ||
       `${p.nombre} en Cefe Digital. Consulta los planes disponibles.`
@@ -74,6 +77,7 @@ export default async function Producto({
   `;
 
   if (!p) notFound();
+    p.nombre = limpiarNombre(p.nombre);
 
   const planes = await sql`
     SELECT
@@ -95,6 +99,31 @@ export default async function Producto({
 
   const hayPlanes = planes.length > 0;
   const esRecarga = p.tipo === "recarga";
+
+    const grupoP = grupoDe(p.categoria, p.nombre);
+    let relacionados = [];
+    if (grupoP) {
+      const recientes = await sql`
+        select p2.slug, p2.nombre, p2.categoria, p2.imagen_url, p2.tipo, p2.campo_cliente,
+          coalesce(
+            (select min(pl.precio) from planes pl
+             where pl.producto_id = p2.id and pl.activo),
+            p2.precio
+          )::float as precio,
+          exists (
+            select 1 from planes pl
+            where pl.producto_id = p2.id and pl.activo
+          ) as con_planes
+        from productos p2
+        where p2.activo and (p2.proveedor is null or p2.proveedor_disponible = true)
+          and p2.proveedor is distinct from 'central_one'
+        order by p2.id desc
+        limit 300
+      `;
+      relacionados = recientes
+        .filter((r) => r.slug !== p.slug && grupoDe(r.categoria, r.nombre) === grupoP)
+        .slice(0, 4);
+    }
 
   const esquemaCo = Array.isArray(p.central_one_target_schema)
     ? p.central_one_target_schema
@@ -216,7 +245,7 @@ export default async function Producto({
                   Configura tu compra
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Revisa y selecciona las opciones disponibles.
+                  Elige tu plan y agrégalo al carrito.
                 </p>
               </div>
 
@@ -232,7 +261,7 @@ export default async function Producto({
                     <div className="flex items-start gap-2 rounded-xl bg-intenso/5 p-4">
                       <FiCheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-intenso" />
                       <p className="text-sm text-marino">
-                        Producto con precio fijo, sin variantes de plan.
+                        Listo para agregar: este producto no necesita elegir plan.
                       </p>
                     </div>
                   )}
@@ -348,6 +377,29 @@ export default async function Producto({
           </div>
         </div>
 
+        {/* Cómo funciona */}
+        <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="text-lg font-bold text-marino">Cómo funciona</h2>
+          <ol className="mt-4 grid gap-4 sm:grid-cols-3">
+            {[
+              ["Elige y agrega", "Selecciona tu plan y agrégalo al carrito."],
+              ["Paga por QR", "Escanea el QR y tu pago se confirma solo."],
+              ["Recibe tu producto", "Te lo entregamos y coordinamos por WhatsApp."]
+            ].map(([t, d], i) => (
+              <li key={t} className="flex items-start gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-intenso text-sm font-bold text-white">{i + 1}</span>
+                <div>
+                  <p className="text-sm font-bold text-marino">{t}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-neutral-600">{d}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <Link href="/garantia" className="mt-4 inline-flex text-xs font-bold text-intenso hover:underline">
+            Garantía de 7 días →
+          </Link>
+        </section>
+
         {/* Descripción y condiciones */}
         <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6">
           <h2 className="text-lg font-bold text-marino">
@@ -372,6 +424,16 @@ export default async function Producto({
             </p>
           </div>
         </section>
+      {relacionados.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-bold text-marino">También te puede interesar</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+              {relacionados.map((r) => (
+                <TarjetaProducto key={r.slug} p={r} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <TiendaFooter
