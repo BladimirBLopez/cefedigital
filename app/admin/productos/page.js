@@ -53,6 +53,15 @@ export default async function Productos({ searchParams }) {
            count(distinct central_one_family_id) filter (where proveedor = 'central_one')::int as central_one
     from productos`;
   const conVence = await sql`select vence::text as vence from productos where vence is not null`;
+  const [alertas] = await sql`
+    select
+      count(*) filter (where activo and proveedor is not null and not proveedor_disponible)::int as sin_stock,
+      count(*) filter (where activo and (
+        (proveedor = 'streamzone' and costo_proveedor_bs > 0 and precio < costo_proveedor_bs)
+        or (proveedor = 'central_one' and costo_proveedor_bs_central_one > 0 and precio < costo_proveedor_bs_central_one)
+      ))::int as bajo_costo,
+      count(*) filter (where activo and (precio is null or precio <= 0))::int as sin_precio
+    from productos`;
   const categoriasProductos = await sql`
     select distinct coalesce(categoria, 'Sin categoría') as categoria from productos`;
 
@@ -198,7 +207,11 @@ export default async function Productos({ searchParams }) {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold">Productos</h1>
-            <Link href="/admin/registro?f=producto" className="text-xs text-marino hover:underline">Ver historial</Link>
+            <span className="text-xs text-neutral-400">
+              <Link href="/admin/registro?f=producto" className="text-marino hover:underline">Ver historial</Link>
+              {" · "}
+              <Link href="/admin/diagnostico" className="text-marino hover:underline">Diagnóstico</Link>
+            </span>
           </div>
           <Link href="/admin/productos/nuevo" className="rounded-xl bg-intenso px-4 py-2 text-sm font-semibold text-white hover:bg-marino">+ Nuevo</Link>
         </div>
@@ -216,6 +229,21 @@ export default async function Productos({ searchParams }) {
             </div>
           ))}
         </div>
+
+        {(alertas.sin_stock > 0 || alertas.bajo_costo > 0 || alertas.sin_precio > 0 || stats.vencen > 0) && (
+          <Link href="/admin/diagnostico" className="mb-4 block rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <p className="font-semibold">Hay cosas por revisar</p>
+            <p className="mt-0.5">
+              {[
+                alertas.bajo_costo > 0 && `${alertas.bajo_costo} bajo el costo`,
+                alertas.sin_stock > 0 && `${alertas.sin_stock} a la venta sin stock`,
+                alertas.sin_precio > 0 && `${alertas.sin_precio} sin precio`,
+                stats.vencen > 0 && `${stats.vencen} por vencer`,
+              ].filter(Boolean).join(" · ")}
+              {" · Ver diagnóstico →"}
+            </p>
+          </Link>
+        )}
 
         {["pedidos", "borrar"].includes(sp?.error) && (
           <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ERRORES[sp.error]}</p>
