@@ -25,7 +25,7 @@ export async function sincronizarCentralOneAction() {
   revalidatePath("/admin/productos");
 
   redirect(
-    `/admin/proveedores/central-one?ok=1&total=${resultado.total}&nuevos=${resultado.nuevos}&actualizados=${resultado.actualizados}`
+    `/admin/proveedores/central-one?ok=1&total=${resultado.total}&nuevos=${resultado.nuevos}&actualizados=${resultado.actualizados}&omitidos=${resultado.omitidos || 0}&omit=${encodeURIComponent(String(resultado.omitidosDetalle || "").slice(0, 300))}`
   );
 }
 

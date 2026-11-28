@@ -14,7 +14,8 @@ export async function sincronizarStreamZone() {
     resultado = await sincronizarCatalogoStreamZone();
   } catch (error) {
     console.error("Sincronización StreamZone:", error);
-    redirect("/admin/proveedores/streamzone?error=sincronizacion");
+    const detalle = String(error?.message || "desconocido").slice(0, 160);
+    redirect("/admin/proveedores/streamzone?error=sincronizacion&detalle=" + encodeURIComponent(detalle));
   }
 
   revalidatePath("/");

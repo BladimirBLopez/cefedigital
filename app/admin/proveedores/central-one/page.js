@@ -3,15 +3,22 @@ import { requireAdmin } from "@/lib/auth";
 import { asegurarEsquema } from "@/lib/esquema";
 import { obtenerBalanceCentralOne } from "@/lib/central-one";
 import AdminNav from "@/components/AdminNav";
-import { sincronizarCentralOneAction, comprobarPermisosCentralOneAction } from "./actions";
+import {
+  EncabezadoProveedor,
+  Aviso,
+  Tarjeta,
+  EstadoVariables
+} from "@/components/PanelProveedor";
+import {
+  sincronizarCentralOneAction,
+  comprobarPermisosCentralOneAction
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const fecha = d => d
-  ? new Date(d).toLocaleString("es-BO", {
-      timeZone: "America/La_Paz"
-    })
+  ? new Date(d).toLocaleString("es-BO", { timeZone: "America/La_Paz" })
   : "Sin registro";
 
 export default async function CentralOne({ searchParams }) {
@@ -47,43 +54,90 @@ export default async function CentralOne({ searchParams }) {
     errorBalance = true;
   }
 
+  const variables = [
+    {
+      nombre: "CO_API_KEY",
+      estado: process.env.CO_API_KEY
+        ? String(process.env.CO_API_KEY).trim().startsWith("co_live_") ? "ok" : "formato"
+        : "falta"
+    },
+    { nombre: "CENTRAL_ONE_WEBHOOK_SECRET", estado: process.env.CENTRAL_ONE_WEBHOOK_SECRET ? "ok" : "falta" },
+    { nombre: "CRON_SECRET", estado: process.env.CRON_SECRET ? "ok" : "falta" },
+    {
+      nombre: "Clave de cifrado de códigos",
+      estado: /^[a-f0-9]{64}$/i.test(
+        process.env.CENTRAL_ONE_CODES_SECRET || process.env.STREAMZONE_CREDENTIALS_SECRET || ""
+      ) ? "ok" : "falta"
+    }
+  ];
+
   return (
     <>
       <AdminNav />
 
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-intenso">
-            Proveedor externo
-          </p>
-          <h1 className="text-2xl font-bold text-marino">
-            Central One
-          </h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Catálogo de Games, recargas y tarjetas digitales.
-          </p>
-        </div>
-
-        {sp?.error === "sync" && (
-          <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            No se pudo sincronizar. Revisa la conexión, la clave API y el BCB.
-            {sp?.detalle && (
-              <span className="mt-1 block font-mono text-xs">Motivo: {String(sp.detalle)}</span>
-            )}
-          </p>
-        )}
+        <EncabezadoProveedor
+          nombre="Central One"
+          descripcion="Catálogo de Games, recargas y tarjetas digitales."
+          accion={sincronizarCentralOneAction}
+          etiquetaAccion="Sincronizar ahora"
+        />
 
         {sp?.ok && (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <Aviso>
             Sincronización completada: {sp.total} productos,
             {` ${sp.nuevos} nuevos y ${sp.actualizados} actualizados.`}
-          </p>
+          </Aviso>
         )}
 
-        <section className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="font-semibold text-marino">Catálogo importado</h2>
+        {sp?.ok && Number(sp.omitidos) > 0 && (
+          <Aviso tipo="error">
+            {sp.omitidos} producto(s) omitidos por datos no reconocidos. No se podrán comprar hasta corregirlo.
+            {sp.omit && (
+              <span className="mt-1 block font-mono text-xs">{String(sp.omit)}</span>
+            )}
+          </Aviso>
+        )}
 
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {sp?.error === "sync" && (
+          <Aviso tipo="error">
+            No se pudo sincronizar. Revisa la conexión, la clave API y el BCB.
+            {sp?.detalle && (
+              <span className="mt-1 block font-mono text-xs">
+                Motivo: {String(sp.detalle)}
+              </span>
+            )}
+          </Aviso>
+        )}
+
+        <Tarjeta titulo="Saldo del proveedor">
+          {balance ? (
+            <p className="text-2xl font-bold text-marino">
+              {balance.available_balance} USD
+            </p>
+          ) : (
+            <p className="text-sm text-neutral-500">
+              {errorBalance
+                ? "Saldo no disponible. Comprueba que la llave tenga balance:read."
+                : "Sin información."}
+            </p>
+          )}
+        </Tarjeta>
+
+        <Tarjeta titulo="Cotización USD a Bs y sincronización">
+          <p className="text-2xl font-bold text-marino">
+            {sync?.tipo_cambio ? `1 USD = Bs ${Number(sync.tipo_cambio).toFixed(2)}` : "Pendiente de sincronización"}
+          </p>
+          <div className="mt-2 space-y-1 text-xs text-neutral-500">
+            <p>Fuente: {sync?.fuente_tasa || "Sin registro"}</p>
+            <p>Fecha de cotización: {sync?.fecha_cambio || "Sin registro"}</p>
+            <p>Última sincronización: {fecha(sync?.sincronizado_en)}</p>
+            <p>Productos: {sync?.total_productos ?? 0}</p>
+          </div>
+        </Tarjeta>
+
+        <Tarjeta titulo="Catálogo importado">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               ["Total", resumen.total],
               ["Publicados", resumen.publicados],
@@ -96,59 +150,16 @@ export default async function CentralOne({ searchParams }) {
               </div>
             ))}
           </div>
-        </section>
+        </Tarjeta>
 
-        <section className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="font-semibold text-marino">Variables</h2>
-          <ul className="mt-2 space-y-1 text-sm text-neutral-600">
-            {[
-              ["CO_API_KEY", process.env.CO_API_KEY ? (String(process.env.CO_API_KEY).trim().startsWith("co_live_") ? "ok" : "formato") : "falta"],
-              ["CENTRAL_ONE_WEBHOOK_SECRET", process.env.CENTRAL_ONE_WEBHOOK_SECRET ? "ok" : "falta"],
-              ["CRON_SECRET", process.env.CRON_SECRET ? "ok" : "falta"],
-              ["Clave de cifrado de códigos", /^[a-f0-9]{64}$/i.test(process.env.CENTRAL_ONE_CODES_SECRET || process.env.STREAMZONE_CREDENTIALS_SECRET || "") ? "ok" : "falta"]
-            ].map(([n, e]) => (
-              <li key={n}>{n}: {e === "ok" ? "✔ Configurada" : e === "formato" ? "⚠ Formato incorrecto" : "✘ Falta"}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="font-semibold text-marino">Saldo del proveedor</h2>
-
-          {balance ? (
-            <p className="mt-2 text-2xl font-bold text-marino">
-              {balance.available_balance} USD
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-neutral-500">
-              {errorBalance
-                ? "Saldo no disponible. Comprueba que la llave tenga balance:read."
-                : "Sin información."}
-            </p>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="font-semibold text-marino">Última sincronización</h2>
-
-          <div className="mt-3 space-y-2 text-sm text-neutral-600">
-            <p>Fecha: {fecha(sync?.sincronizado_en)}</p>
-            <p>Productos: {sync?.total_productos ?? 0}</p>
-            <p>Tipo de cambio USD/Bs: {sync?.tipo_cambio ?? "Sin registro"}</p>
-            <p>Fuente: {sync?.fuente_tasa || "Sin registro"}</p>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-3">
-          <h2 className="font-semibold text-marino">Permisos de la llave</h2>
-
-          <p className="text-sm text-neutral-600">
+        <Tarjeta titulo="Permisos de la llave">
+          <p className="mb-3 text-sm text-neutral-600">
             Comprueba lectura de saldo, catálogo y pedidos. No compra nada.
             El permiso para crear pedidos se confirma en el portal de Central One.
           </p>
 
           {sp?.permisos && (
-            <ul className="text-sm space-y-1">
+            <ul className="mb-3 space-y-1 text-sm">
               {String(sp.permisos).split(",").map((x) => {
                 const [n, e] = x.split("-");
                 const t = { saldo: "Saldo", catalogo: "Catálogo", pedidos: "Consultar pedidos" }[n] || n;
@@ -163,23 +174,14 @@ export default async function CentralOne({ searchParams }) {
               Comprobar permisos
             </button>
           </form>
-        </section>
+        </Tarjeta>
 
-        <section className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-3">
-          <h2 className="font-semibold text-marino">Sincronizar catálogo</h2>
+        <EstadoVariables variables={variables} />
 
-          <p className="text-sm text-neutral-600">
-            Importa los productos habilitados de Central One,
-            actualiza precios, disponibilidad y campos dinámicos.
-            Los productos nuevos se crean ocultos para publicación manual.
-          </p>
-
-          <form action={sincronizarCentralOneAction}>
-            <button className="w-full rounded-xl bg-intenso px-4 py-3 font-semibold text-white hover:bg-marino">
-              Sincronizar ahora
-            </button>
-          </form>
-        </section>
+        <p className="text-xs text-neutral-500">
+          La sincronización importa los productos habilitados, actualiza precios, disponibilidad y campos dinámicos.
+          Los productos nuevos se crean ocultos para publicación manual. Los precios que hayas editado manualmente se conservan.
+        </p>
       </main>
     </>
   );

@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { asegurarEsquema } from "@/lib/esquema";
 import AdminNav from "@/components/AdminNav";
+import { EncabezadoProveedor, Aviso, EstadoVariables } from "@/components/PanelProveedor";
 import {
   obtenerPerfilStreamZone,
   obtenerCatalogoStreamZone
@@ -10,7 +11,7 @@ import { sincronizarStreamZone } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const panel = "rounded-2xl border border-neutral-200 bg-white p-4";
+const panel = "rounded-2xl border border-neutral-200 bg-white p-5";
 
 function numero(v, decimales = 2) {
   return v == null || v === "" || !Number.isFinite(Number(v))
@@ -97,35 +98,25 @@ export default async function StreamZonePage({ searchParams }) {
     <>
       <AdminNav />
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-5">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-xl font-semibold">StreamZone</h1>
-            <p className="text-sm text-neutral-500 mt-1">
-              Catálogo mayorista y sincronización con Cefe Digital.
-            </p>
-          </div>
-
-          <form action={sincronizarStreamZone}>
-            <button className="rounded-xl bg-intenso hover:bg-marino text-white px-4 py-3 text-sm font-semibold">
-              Sincronizar e importar
-            </button>
-          </form>
-        </div>
+        <EncabezadoProveedor nombre="StreamZone" descripcion="Catálogo mayorista y sincronización con Cefe Digital." accion={sincronizarStreamZone} etiquetaAccion="Sincronizar e importar" />
 
         {sp?.ok === "1" && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <Aviso>
             Sincronización completada. Nuevos: {sp.nuevos || 0} · Actualizados: {sp.actualizados || 0}.
-          </div>
+          </Aviso>
         )}
 
         {sp?.error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <Aviso tipo="error">
             No se pudo completar la sincronización. Revisa la conexión con el proveedor y el BCB.
-          </div>
+            {sp?.detalle && (
+              <span className="mt-1 block font-mono text-xs">Motivo: {String(sp.detalle)}</span>
+            )}
+          </Aviso>
         )}
 
         <section className={panel}>
-          <h2 className="font-semibold mb-3">Estado de conexión</h2>
+          <h2 className="font-semibold text-marino mb-3">Estado de conexión</h2>
           <p className="text-sm">
             Perfil: {perfil.ok ? "Conectado" : "Sin conexión"}
           </p>
@@ -146,7 +137,7 @@ export default async function StreamZonePage({ searchParams }) {
         </section>
 
         <section className={panel}>
-          <h2 className="font-semibold mb-3">Billetera del proveedor</h2>
+          <h2 className="font-semibold text-marino mb-3">Billetera del proveedor</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-xs text-neutral-500">Saldo USD</p>
@@ -168,7 +159,7 @@ export default async function StreamZonePage({ searchParams }) {
         </section>
 
         <section className={panel}>
-          <h2 className="font-semibold mb-3">Cotización referencial COP a Bs</h2>
+          <h2 className="font-semibold text-marino mb-3">Cotización referencial COP a Bs</h2>
           <p className="text-xs text-neutral-500 mb-2">
             Las cotizaciones de monedas distintas al dólar estadounidense son indicativas según el BCB.
           </p>
@@ -251,6 +242,15 @@ export default async function StreamZonePage({ searchParams }) {
             </div>
           )}
         </section>
+
+        <EstadoVariables
+          variables={[
+            { nombre: "STREAMZONE_API_KEY", estado: process.env.STREAMZONE_API_KEY ? "ok" : "falta" },
+            { nombre: "STREAMZONE_WEBHOOK_SECRET", estado: process.env.STREAMZONE_WEBHOOK_SECRET ? "ok" : "falta" },
+            { nombre: "CRON_SECRET", estado: process.env.CRON_SECRET ? "ok" : "falta" },
+            { nombre: "Clave de cifrado de credenciales", estado: /^[a-f0-9]{64}$/i.test(process.env.STREAMZONE_CREDENTIALS_SECRET || "") ? "ok" : "falta" }
+          ]}
+        />
 
         <p className="text-xs text-neutral-500">
           La sincronización actualiza costos y disponibilidad. Los precios que hayas editado manualmente se conservan.
