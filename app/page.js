@@ -7,7 +7,7 @@ import TiendaFooter from "@/components/TiendaFooter";
 import TarjetaProducto from "@/components/TarjetaProducto";
 import TarjetaJuego from "@/components/TarjetaJuego";
 import { iconoCategoria } from "@/lib/iconosCategoria";
-import { grupoDe, gruposConProductos, nombresDeGrupo } from "@/lib/categorias-tienda";
+import { GRUPOS, grupoDe, gruposConProductos } from "@/lib/categorias-tienda";
 import {
   FiZap,
   FiShield,
@@ -131,15 +131,14 @@ export default async function Home({ searchParams }) {
   const aj = await obtenerAjustes();
 
   const conteo = await sql`
-      select categoria
+      select categoria, nombre
       from productos
       where activo and (proveedor is null or proveedor_disponible = true)
         and proveedor is distinct from 'central_one' and categoria is not null
-      group by categoria
     `;
-    const nombresTodos = conteo.map((r) => r.categoria);
-    const cats = gruposConProductos(nombresTodos);
-    const nombresCat = cat ? nombresDeGrupo(cat, nombresTodos) : null;
+    const cats = gruposConProductos(conteo);
+    const esGrupo = !!cat && GRUPOS.includes(cat);
+    const nombresCat = cat && !esGrupo ? [cat] : null;
 
     let lista = [];
     let total = 0;
@@ -151,10 +150,18 @@ export default async function Home({ searchParams }) {
   let juegos = [];
 
   if (catalogo) {
-      const prods = verJuegos ? [] : await traerProductos({ nombres: nombresCat, q, orden, limite: POR + 1, offset: (pag - 1) * POR });
+      let prods = [];
+      if (!verJuegos && esGrupo) {
+        const todos = (await traerProductos({ q, orden, limite: 1000 }))
+          .filter((r) => grupoDe(r.categoria, r.nombre) === cat);
+        total = todos.length;
+        prods = todos.slice((pag - 1) * POR, pag * POR + 1);
+      } else if (!verJuegos) {
+        prods = await traerProductos({ nombres: nombresCat, q, orden, limite: POR + 1, offset: (pag - 1) * POR });
+      }
       hayMas = prods.length > POR;
       lista = prods.slice(0, POR);
-      total = verJuegos ? 0 : await contarProductos({ nombres: nombresCat, q });
+      if (!verJuegos && !esGrupo) total = await contarProductos({ nombres: nombresCat, q });
       paginas = Math.max(pag, Math.ceil(total / POR));
     } else {
       destacados = await traerProductos({ soloDestacados: true, limite: 8 });
@@ -167,7 +174,7 @@ export default async function Home({ searchParams }) {
       const filas = await traerProductos({ limite: 300 });
       for (const f of filas) {
         if (vistos.has(f.slug) || !f.categoria) continue;
-        const g = grupoDe(f.categoria);
+        const g = grupoDe(f.categoria, f.nombre);
         if (!g) continue;
         const arr = (porCat[g] ||= []);
         if (arr.length < 8) arr.push(f);
