@@ -27,7 +27,7 @@ function datoDesdeFormulario(formData, p) {
     : [];
 
   if (p.proveedor !== "central_one" || campos.length === 0) {
-    return datoDesdeFormulario(formData, p);
+    return String(formData.get("dato_cliente") || "");
   }
 
   const objeto = {};
