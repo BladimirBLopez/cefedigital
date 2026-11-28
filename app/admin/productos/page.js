@@ -7,6 +7,7 @@ import CamposProducto from "@/components/CamposProducto";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { crearProducto, publicarLista } from "../actions";
+import { publicarJuego, ocultarJuego } from "../acciones-juegos";
 import Interruptor from "@/components/Interruptor";
 import EstrellaDestacado from "@/components/EstrellaDestacado";
 import SwitchVenta from "@/components/SwitchVenta";
@@ -77,7 +78,31 @@ export default async function Productos({ searchParams }) {
   const hayMas = estado !== "vencen" && filas.length > POR_PAGINA;
   const lista = estado === "vencen" ? filas.filter(vencen) : filas.slice(0, POR_PAGINA);
 
-  const publicables = lista.filter((p) => !p.activo && p.precio > 0 && (!p.proveedor || p.proveedor_disponible));
+  const modoJuegos = prov === "central_one" && !patron && estado !== "vencen" && cats.length === 0;
+  let juegosAdmin = [];
+  let hayMasJuegos = false;
+
+  if (modoJuegos) {
+    const fj = await sql`
+      select central_one_family_id as id,
+             max(central_one_family_name) as nombre,
+             count(*)::int as total,
+             count(*) filter (where activo)::int as publicados,
+             count(*) filter (where not activo and precio > 0 and proveedor_disponible)::int as publicables,
+             (min(precio) filter (where precio > 0))::float as desde
+      from productos
+      where proveedor = 'central_one' and central_one_family_id is not null
+      group by central_one_family_id
+      having (${estado} <> 'venta' or count(*) filter (where activo) > 0)
+         and (${estado} <> 'oculto' or count(*) filter (where not activo) > 0)
+      order by max(central_one_family_name)
+      limit ${POR_PAGINA + 1}
+      offset ${(pagina - 1) * POR_PAGINA}`;
+    hayMasJuegos = fj.length > POR_PAGINA;
+    juegosAdmin = fj.slice(0, POR_PAGINA);
+  }
+
+  const publicables = modoJuegos ? [] : lista.filter((p) => !p.activo && p.precio > 0 && (!p.proveedor || p.proveedor_disponible));
   const hrefProv = (v) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
@@ -243,9 +268,44 @@ export default async function Productos({ searchParams }) {
           </form>
         )}
 
+        {modoJuegos && (
+          <ul className="space-y-3">
+            {juegosAdmin.length === 0 && <li className="text-sm text-neutral-500">No hay juegos con ese filtro.</li>}
+            {juegosAdmin.map((g) => (
+              <li key={g.id} className="rounded-2xl bg-white border border-neutral-200 p-3 space-y-2">
+                <p className="font-medium text-marino">{g.nombre}</p>
+                <p className="text-xs text-neutral-500">
+                  {g.total} paquetes · {g.publicados} publicados{g.desde ? " · desde Bs " + g.desde.toFixed(2) : ""}
+                </p>
+                {g.publicables > 0 && (
+                  <form action={publicarJuego} className="space-y-2">
+                    <input type="hidden" name="familia_id" value={g.id} />
+                    <input type="hidden" name="volver" value={hrefPag(pagina)} />
+                    <label className="flex items-center gap-2 text-xs text-neutral-600">
+                      <input type="checkbox" name="confirmo" required />
+                      Confirmo que revisé los precios de este juego
+                    </label>
+                    <button className="w-full rounded-xl bg-intenso px-4 py-2 text-sm font-semibold text-white hover:bg-marino">
+                      Publicar {g.publicables} paquetes
+                    </button>
+                  </form>
+                )}
+                {g.publicados > 0 && (
+                  <form action={ocultarJuego}>
+                    <input type="hidden" name="familia_id" value={g.id} />
+                    <input type="hidden" name="volver" value={hrefPag(pagina)} />
+                    <button className="w-full rounded-xl border border-neutral-300 px-4 py-2 text-sm font-semibold text-marino">
+                      Ocultar los {g.publicados} publicados
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
         <ul className="space-y-3">
-          {lista.length === 0 && <li className="text-sm text-neutral-500">No hay productos con ese filtro.</li>}
-          {lista.map((p) => {
+          {!modoJuegos && lista.length === 0 && <li className="text-sm text-neutral-500">No hay productos con ese filtro.</li>}
+          {(modoJuegos ? [] : lista).map((p) => {
             const bajo = false;
             const ev = estadoVence(p.vence);
             return (
@@ -301,11 +361,11 @@ export default async function Productos({ searchParams }) {
             );
           })}
         </ul>
-              {estado !== "vencen" && (pagina > 1 || hayMas) && (
+              {estado !== "vencen" && (pagina > 1 || hayMas || hayMasJuegos) && (
           <nav className="mt-4 flex items-center justify-between text-sm">
             {pagina > 1 ? <Link href={hrefPag(pagina - 1)} className="text-marino hover:underline">← Anterior</Link> : <span />}
             <span className="text-neutral-500">Página {pagina}</span>
-            {hayMas ? <Link href={hrefPag(pagina + 1)} className="text-marino hover:underline">Siguiente →</Link> : <span />}
+            {hayMas || hayMasJuegos ? <Link href={hrefPag(pagina + 1)} className="text-marino hover:underline">Siguiente →</Link> : <span />}
           </nav>
         )}
       </main>
