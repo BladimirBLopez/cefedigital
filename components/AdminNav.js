@@ -19,7 +19,7 @@ import { salir } from "@/app/admin/actions";
 
 const GRUPOS = [
   { titulo: null, enlaces: [{ href: "/admin", texto: "Inicio", icono: FiHome, exacto: true }] },
-  { titulo: "Catálogo", enlaces: [{ href: "/admin/productos", texto: "Productos", icono: FiPackage }, { href: "/admin/juegos", texto: "Juegos", icono: FiPackage }] },
+  { titulo: "Catálogo", enlaces: [{ href: "/admin/productos", texto: "Productos", icono: FiPackage }] },
   {
     titulo: "Ventas",
     enlaces: [

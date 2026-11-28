@@ -88,6 +88,16 @@ export default async function EditarProducto({ params, searchParams }) {
       select categoria, 9999 from productos where categoria is not null
     ) t group by categoria order by min(orden), categoria`;
 
+  let historial = [];
+  try {
+    historial = await sql`
+      select accion, detalle,
+             to_char(creado at time zone 'America/La_Paz', 'DD/MM HH24:MI') as cuando
+      from registro_admin
+      where entidad = 'producto' and entidad_id = ${id}
+      order by creado desc limit 12`;
+  } catch {}
+
   const etiqueta = PROVEEDORES[p.proveedor] || PROPIO;
   const volver = "/admin/productos?prov=" + (PROVEEDORES[p.proveedor] ? p.proveedor : "propio");
   const costo =
@@ -242,6 +252,22 @@ export default async function EditarProducto({ params, searchParams }) {
           <Link href={`/admin/productos/${p.id}/planes`} className="mt-4 block rounded-2xl bg-white border border-esmeralda p-4 text-center font-semibold text-marino hover:bg-esmeralda/10">
             Editar planes y precios →
           </Link>
+        )}
+        {historial.length > 0 && (
+          <section className="mt-4 rounded-2xl bg-white border border-neutral-200 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Historial de cambios</h2>
+              <Link href="/admin/registro?f=producto" className="text-xs text-marino hover:underline">Ver todo →</Link>
+            </div>
+            <ul className="divide-y divide-neutral-100">
+              {historial.map((h, i) => (
+                <li key={i} className="py-2">
+                  <p className="text-xs text-neutral-800">{h.detalle || h.accion}</p>
+                  <p className="text-[11px] text-neutral-500">{h.cuando}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
         <div className="mt-6 flex justify-end">
           <BorrarSiLibre id={p.id} nombre={p.nombre} />
