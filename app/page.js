@@ -7,6 +7,7 @@ import TiendaFooter from "@/components/TiendaFooter";
 import TarjetaProducto from "@/components/TarjetaProducto";
 import TarjetaJuego from "@/components/TarjetaJuego";
 import { iconoCategoria } from "@/lib/iconosCategoria";
+import { grupoDe, gruposConProductos, nombresDeGrupo } from "@/lib/categorias-tienda";
 import {
   FiZap,
   FiShield,
@@ -24,7 +25,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-async function traerProductos({ cat = null, q = null, soloDestacados = false, limite = 8, offset = 0 }) {
+async function traerProductos({ nombres = null, q = null, soloDestacados = false, limite = 8, offset = 0 }) {
   return await sql`
     select p.slug, p.nombre, p.categoria, p.imagen_url, p.tipo, p.campo_cliente,
       coalesce(
@@ -39,7 +40,7 @@ async function traerProductos({ cat = null, q = null, soloDestacados = false, li
     from productos p
     where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
       and p.proveedor is distinct from 'central_one'
-      and (${cat}::text is null or p.categoria = ${cat})
+      and (${nombres}::text[] is null or p.categoria = any(${nombres}::text[]))
       and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
       and (${soloDestacados}::boolean is not true or p.destacado)
     order by p.id desc
@@ -109,21 +110,18 @@ export default async function Home({ searchParams }) {
   const catalogo = !!(cat || q || pag > 1 || sp?.todos);
   const aj = await obtenerAjustes();
 
-  const cats = await sql`
-    select categoria
-    from (
-      select nombre as categoria, orden
-      from categorias
-      union all
-      select categoria, 9999 as orden
+  const conteo = await sql`
+      select categoria
       from productos
-      where activo and (proveedor is null or proveedor_disponible = true) and categoria is not null
-    ) t
-    group by categoria
-    order by min(orden), categoria
-  `;
+      where activo and (proveedor is null or proveedor_disponible = true)
+        and proveedor is distinct from 'central_one' and categoria is not null
+      group by categoria
+    `;
+    const nombresTodos = conteo.map((r) => r.categoria);
+    const cats = gruposConProductos(nombresTodos);
+    const nombresCat = cat ? nombresDeGrupo(cat, nombresTodos) : null;
 
-  let lista = [];
+    let lista = [];
   let hayMas = false;
   let destacados = [];
   let novedades = [];
@@ -131,7 +129,7 @@ export default async function Home({ searchParams }) {
   let juegos = [];
 
   if (catalogo) {
-      const prods = await traerProductos({ cat, q, limite: POR + 1, offset: (pag - 1) * POR });
+      const prods = await traerProductos({ nombres: nombresCat, q, limite: POR + 1, offset: (pag - 1) * POR });
       hayMas = prods.length > POR;
       lista = prods.slice(0, POR);
     } else {
@@ -142,32 +140,12 @@ export default async function Home({ searchParams }) {
       novedades = recientes.filter((p) => !vistos.has(p.slug)).slice(0, 8);
       novedades.forEach((p) => vistos.add(p.slug));
 
-      const filas = await sql`
-        select * from (
-          select p.slug, p.nombre, p.categoria, p.imagen_url, p.tipo, p.campo_cliente,
-            coalesce(
-              (select min(pl.precio) from planes pl
-               where pl.producto_id = p.id and pl.activo),
-              p.precio
-            )::float as precio,
-            exists (
-              select 1 from planes pl
-              where pl.producto_id = p.id and pl.activo
-            ) as con_planes,
-            row_number() over (
-              partition by p.categoria order by p.id desc
-            ) as rn
-          from productos p
-          where p.activo and (p.proveedor is null or p.proveedor_disponible = true) and p.categoria is not null
-            and p.proveedor is distinct from 'central_one'
-        ) t
-        where rn <= 24
-        order by categoria, rn
-      `;
-
+      const filas = await traerProductos({ limite: 300 });
       for (const f of filas) {
-        if (vistos.has(f.slug)) continue;
-        const arr = (porCat[f.categoria] ||= []);
+        if (vistos.has(f.slug) || !f.categoria) continue;
+        const g = grupoDe(f.categoria);
+        if (!g) continue;
+        const arr = (porCat[g] ||= []);
         if (arr.length < 8) arr.push(f);
       }
     }
