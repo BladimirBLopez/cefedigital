@@ -31,8 +31,8 @@ export default function PrecioPaquete({ id, precio, costo, sugerido, sinStock })
   }
 
   return (
-    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-      <span>Costo {costo > 0 ? costo.toFixed(2) : "—"}</span>
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+      {costo > 0 && <span>Costo {costo.toFixed(2)}</span>}
       <label className="flex items-center gap-1">
         <span>Bs</span>
         <input

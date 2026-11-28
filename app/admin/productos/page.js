@@ -62,7 +62,8 @@ export default async function Productos({ searchParams }) {
 
   const filas = await sql`
     select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.destacado, p.vence::text as vence,
-      p.precio::float as precio, p.activo, p.proveedor, p.costo_proveedor_bs::float as costo_proveedor_bs, p.costo_proveedor_bs_central_one::float as costo_proveedor_bs_central_one, p.precio_sugerido::float as precio_sugerido, p.margen_porcentaje::float as margen_porcentaje, p.precio_manual, p.proveedor_disponible, p.stock_proveedor
+      p.precio::float as precio, p.activo, p.proveedor, p.costo_proveedor_bs::float as costo_proveedor_bs, p.costo_proveedor_bs_central_one::float as costo_proveedor_bs_central_one, p.precio_sugerido::float as precio_sugerido, p.margen_porcentaje::float as margen_porcentaje, p.precio_manual, p.proveedor_disponible, p.stock_proveedor,
+      exists(select 1 from planes pl where pl.producto_id = p.id) as tiene_planes
     from productos p
     where (${patron}::text is null or lower(p.nombre || ' ' || coalesce(p.categoria, '')) like ${patron})
       and (${cats.length}::int = 0 or coalesce(p.categoria, 'Sin categoría') in (select jsonb_array_elements_text(${catsJson}::jsonb)))
@@ -108,7 +109,8 @@ export default async function Productos({ searchParams }) {
              coalesce(p.central_one_region, 'General') as region,
              p.precio::float as precio,
              p.costo_proveedor_bs_central_one::float as costo,
-             p.precio_sugerido::float as sugerido
+             p.precio_sugerido::float as sugerido,
+             p.destacado
       from productos p
       where p.proveedor = 'central_one'
         and p.central_one_family_id in (select jsonb_array_elements_text(${idsJuegos}::jsonb))
@@ -331,7 +333,10 @@ export default async function Productos({ searchParams }) {
                               <Link href={`/admin/productos/${x.id}`} className="block min-w-0 flex-1 truncate text-xs font-medium text-marino hover:underline">
                                 {x.nombre}
                               </Link>
-                              <Interruptor id={x.id} activo={x.activo} />
+                              <div className="flex shrink-0 items-center gap-2">
+                                <EstrellaDestacado id={x.id} destacado={x.destacado} />
+                                <Interruptor id={x.id} activo={x.activo} />
+                              </div>
                             </div>
                             <PrecioPaquete id={x.id} precio={x.precio} costo={x.costo || 0} sugerido={x.sugerido || 0} sinStock={!x.proveedor_disponible} />
                           </div>
@@ -353,47 +358,46 @@ export default async function Productos({ searchParams }) {
             const costo =
               p.proveedor === "streamzone" ? p.costo_proveedor_bs
               : p.proveedor === "central_one" ? p.costo_proveedor_bs_central_one
-              : null;
-            const gan = costo > 0 ? p.precio - costo : null;
+              : 0;
             const sinStock = p.proveedor && !p.proveedor_disponible;
             return (
-              <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3">
-                <Link href={`/admin/productos/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 text-[10px] text-neutral-400">
-                    {p.imagen_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imagen_url} alt="" loading="lazy" className="h-full w-full object-contain" />
-                    ) : (
-                      "Sin foto"
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-marino">{p.nombre}</p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                      <span className={"rounded-full px-1.5 py-0.5 text-[10px] font-medium " + et.clase}>{et.texto}</span>
-                      <span className="truncate text-[11px] text-neutral-500">{p.categoria || "Sin categoría"} · {TIPOS[p.tipo] || "Clave"}</span>
-                    </div>
-                    <p className="mt-0.5 text-sm font-semibold">
-                      Bs {bs(p.precio)}
-                      {gan !== null && (
-                        <span className={"ml-2 text-[11px] font-normal " + (gan >= 0 ? "text-emerald-600" : "text-red-600")}>
-                          costo {bs(costo)} · gana {bs(gan)}
-                        </span>
+              <li key={p.id} className="rounded-2xl border border-neutral-200 bg-white p-3">
+                <div className="flex items-center gap-3">
+                  <Link href={`/admin/productos/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 text-[10px] text-neutral-400">
+                      {p.imagen_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.imagen_url} alt="" loading="lazy" className="h-full w-full object-contain" />
+                      ) : (
+                        "Sin foto"
                       )}
-                    </p>
-                    {(sinStock || ev.clave !== "sin" || p.precio_manual) && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {sinStock && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">Sin stock</span>}
-                        {ev.clave !== "sin" && <span className={"rounded-full px-2 py-0.5 text-[10px] " + ev.clase}>{ev.texto}</span>}
-                        {p.precio_manual && p.proveedor && <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Precio manual</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-marino">{p.nombre}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                        <span className={"rounded-full px-1.5 py-0.5 text-[10px] font-medium " + et.clase}>{et.texto}</span>
+                        <span className="truncate text-[11px] text-neutral-500">{p.categoria || "Sin categoría"} · {TIPOS[p.tipo] || "Clave"}</span>
                       </div>
-                    )}
+                      {(ev.clave !== "sin" || (p.precio_manual && p.proveedor)) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {ev.clave !== "sin" && <span className={"rounded-full px-2 py-0.5 text-[10px] " + ev.clase}>{ev.texto}</span>}
+                          {p.precio_manual && p.proveedor && <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Precio manual</span>}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                  <div className="flex shrink-0 flex-col items-center gap-2">
+                    <Interruptor id={p.id} activo={p.activo} />
+                    <EstrellaDestacado id={p.id} destacado={p.destacado} />
                   </div>
-                </Link>
-                <div className="flex shrink-0 flex-col items-center gap-2">
-                  <Interruptor id={p.id} activo={p.activo} />
-                  <EstrellaDestacado id={p.id} destacado={p.destacado} />
                 </div>
+                {p.tiene_planes ? (
+                  <Link href={`/admin/productos/${p.id}/planes`} className="mt-2 block rounded-xl border border-neutral-200 px-3 py-2 text-xs font-semibold text-marino">
+                    Desde Bs {bs(p.precio)} · Editar planes y precios →
+                  </Link>
+                ) : (
+                  <PrecioPaquete id={p.id} precio={p.precio} costo={costo || 0} sugerido={p.precio_sugerido || 0} sinStock={!!sinStock} />
+                )}
               </li>
             );
           })}
