@@ -5,10 +5,12 @@ import AdminNav from "@/components/AdminNav";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { publicarLista } from "../actions";
-import { publicarJuego, ocultarJuego } from "../acciones-juegos";
+import { publicarJuego } from "../acciones-juegos";
 import Interruptor from "@/components/Interruptor";
 import PrecioPaquete from "@/components/PrecioPaquete";
 import ConfirmarForm from "@/components/ConfirmarForm";
+import InterruptorJuego from "@/components/InterruptorJuego";
+import { FiEdit2 } from "react-icons/fi";
 import EstrellaDestacado from "@/components/EstrellaDestacado";
 
 export const dynamic = "force-dynamic";
@@ -92,7 +94,7 @@ export default async function Productos({ searchParams }) {
              count(*) filter (where activo)::int as publicados,
              count(*) filter (where not activo and precio > 0 and proveedor_disponible)::int as publicables,
              (min(precio) filter (where precio > 0))::float as desde,
-             (array_agg(imagen_url) filter (where imagen_url is not null))[1] as imagen
+             coalesce((select ji.imagen_url from juegos_imagen ji where ji.familia_id = central_one_family_id limit 1), (array_agg(imagen_url) filter (where imagen_url is not null))[1]) as imagen
       from productos
       where proveedor = 'central_one' and central_one_family_id is not null
       group by central_one_family_id
@@ -284,44 +286,39 @@ export default async function Productos({ searchParams }) {
             {juegosAdmin.map((g) => (
               <li key={g.id} className="rounded-2xl border border-neutral-200 bg-white p-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 text-[10px] text-neutral-400">
-                    {g.imagen ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={g.imagen} alt="" loading="lazy" className="h-full w-full object-contain" />
-                    ) : (
-                      "Sin foto"
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-marino">{g.nombre}</p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                      <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">Central One</span>
-                      <span className="text-[11px] text-neutral-500">{g.total} paquetes · {g.publicados} publicados</span>
+                  <Link href={`/admin/juegos/${encodeURIComponent(g.id)}`} className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 text-[10px] text-neutral-400">
+                      {g.imagen ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={g.imagen} alt="" loading="lazy" className="h-full w-full object-contain" />
+                      ) : (
+                        "Sin foto"
+                      )}
                     </div>
-                    <p className="mt-0.5 text-sm font-semibold">{g.desde ? "Desde Bs " + g.desde.toFixed(2) : "Sin precio"}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-marino">{g.nombre}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                        <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">Central One</span>
+                        <span className="text-[11px] text-neutral-500">{g.total} paquetes · {g.publicados} publicados</span>
+                      </div>
+                      <p className="mt-0.5 text-sm font-semibold">{g.desde ? "Desde Bs " + g.desde.toFixed(2) : "Sin precio"}</p>
+                    </div>
+                  </Link>
+                  <div className="flex shrink-0 flex-col items-center gap-2">
+                    <InterruptorJuego familia={String(g.id)} publicados={g.publicados} publicables={g.publicables} nombre={g.nombre} />
+                    <Link href={`/admin/juegos/${encodeURIComponent(g.id)}`} aria-label="Editar juego" className="rounded-full border border-neutral-300 p-1.5 text-neutral-500 hover:text-marino">
+                      <FiEdit2 className="h-4 w-4" />
+                    </Link>
                   </div>
                 </div>
-                {(g.publicables > 0 || g.publicados > 0) && (
-                  <div className="mt-2 flex gap-2">
-                    {g.publicables > 0 && (
-                      <ConfirmarForm action={publicarJuego} mensaje={`¿Publicar ${g.publicables} paquetes de ${g.nombre}? Revisa que los precios estén bien.`} className="flex-1">
-                        <input type="hidden" name="familia_id" value={g.id} />
-                        <input type="hidden" name="volver" value={hrefPag(pagina)} />
-                        <button className="w-full rounded-xl bg-intenso px-3 py-2 text-xs font-semibold text-white hover:bg-marino">
-                          Publicar {g.publicables}
-                        </button>
-                      </ConfirmarForm>
-                    )}
-                    {g.publicados > 0 && (
-                      <ConfirmarForm action={ocultarJuego} mensaje={`¿Ocultar los ${g.publicados} paquetes publicados de ${g.nombre}?`} className="flex-1">
-                        <input type="hidden" name="familia_id" value={g.id} />
-                        <input type="hidden" name="volver" value={hrefPag(pagina)} />
-                        <button className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-xs font-semibold text-marino">
-                          Ocultar {g.publicados}
-                        </button>
-                      </ConfirmarForm>
-                    )}
-                  </div>
+                {g.publicados > 0 && g.publicables > 0 && (
+                  <ConfirmarForm action={publicarJuego} mensaje={`¿Publicar los ${g.publicables} paquetes restantes de ${g.nombre}? Revisa que los precios estén bien.`} className="mt-2">
+                    <input type="hidden" name="familia_id" value={g.id} />
+                    <input type="hidden" name="volver" value={hrefPag(pagina)} />
+                    <button className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-xs font-semibold text-marino">
+                      Publicar los {g.publicables} restantes
+                    </button>
+                  </ConfirmarForm>
                 )}
                 <details className="mt-2 rounded-xl border border-neutral-200">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-marino">
@@ -397,7 +394,12 @@ export default async function Productos({ searchParams }) {
                   </Link>
                   <div className="flex shrink-0 flex-col items-center gap-2">
                     <Interruptor id={p.id} activo={p.activo} />
-                    <EstrellaDestacado id={p.id} destacado={p.destacado} />
+                    <div className="flex items-center gap-1.5">
+                      <Link href={`/admin/productos/${p.id}`} aria-label="Editar" className="rounded-full border border-neutral-300 p-1.5 text-neutral-500 hover:text-marino">
+                        <FiEdit2 className="h-4 w-4" />
+                      </Link>
+                      <EstrellaDestacado id={p.id} destacado={p.destacado} />
+                    </div>
                   </div>
                 </div>
                 {p.tiene_planes ? (
