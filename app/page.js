@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { sql } from "@/lib/db";
 import { asegurarEsquema } from "@/lib/esquema";
-import { obtenerAjustes } from "@/lib/ajustes";
+import { obtenerAjustes, limpiarWhatsapp } from "@/lib/ajustes";
 import TiendaHeader from "@/components/TiendaHeader";
 import TiendaFooter from "@/components/TiendaFooter";
 import TarjetaProducto from "@/components/TarjetaProducto";
@@ -25,27 +25,45 @@ import {
 
 export const dynamic = "force-dynamic";
 
-async function traerProductos({ nombres = null, q = null, soloDestacados = false, limite = 8, offset = 0 }) {
+async function traerProductos({ nombres = null, q = null, soloDestacados = false, orden = "recientes", limite = 8, offset = 0 }) {
   return await sql`
-    select p.slug, p.nombre, p.categoria, p.imagen_url, p.tipo, p.campo_cliente,
-      coalesce(
-        (select min(pl.precio) from planes pl
-         where pl.producto_id = p.id and pl.activo),
-        p.precio
-      )::float as precio,
-      exists (
-        select 1 from planes pl
-        where pl.producto_id = p.id and pl.activo
-      ) as con_planes
+    select * from (
+      select p.slug, p.nombre, p.categoria, p.imagen_url, p.tipo, p.campo_cliente, p.id,
+        coalesce(
+          (select min(pl.precio) from planes pl
+           where pl.producto_id = p.id and pl.activo),
+          p.precio
+        )::float as precio,
+        exists (
+          select 1 from planes pl
+          where pl.producto_id = p.id and pl.activo
+        ) as con_planes
+      from productos p
+      where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
+        and p.proveedor is distinct from 'central_one'
+        and (${nombres}::text[] is null or p.categoria = any(${nombres}::text[]))
+        and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
+        and (${soloDestacados}::boolean is not true or p.destacado)
+    ) t
+    order by
+      case when ${orden}::text = 'precio_asc' then precio end asc nulls last,
+      case when ${orden}::text = 'precio_desc' then precio end desc nulls last,
+      case when ${orden}::text = 'nombre' then lower(nombre) end asc,
+      id desc
+    limit ${limite} offset ${offset}
+  `;
+}
+
+async function contarProductos({ nombres = null, q = null }) {
+  const [r] = await sql`
+    select count(*)::int as n
     from productos p
     where p.activo and (p.proveedor is null or p.proveedor_disponible = true)
       and p.proveedor is distinct from 'central_one'
       and (${nombres}::text[] is null or p.categoria = any(${nombres}::text[]))
       and (${q}::text is null or p.nombre ilike '%' || ${q} || '%')
-      and (${soloDestacados}::boolean is not true or p.destacado)
-    order by p.id desc
-    limit ${limite} offset ${offset}
   `;
+  return r ? r.n : 0;
 }
 
 function Fila({ titulo, items, verTodos, Icono = FiGrid }) {
@@ -89,7 +107,7 @@ function FilaJuegos({ juegos }) {
   return (
     <section className="mt-9">
       <h2 className="text-lg font-extrabold tracking-tight text-marino">
-        Recargas de juegos
+        Recargas de juegos{juegos.length === 24 && (<Link href="/?juegos=1" className="ml-3 text-xs font-bold text-intenso">Ver todos →</Link>)}
       </h2>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         {juegos.map((j) => (
@@ -107,7 +125,9 @@ export default async function Home({ searchParams }) {
   const q = sp?.q ? String(sp.q).trim().slice(0, 40) : null;
   const POR = 24;
   const pag = Math.max(1, Math.min(500, parseInt(sp?.pag, 10) || 1));
-  const catalogo = !!(cat || q || pag > 1 || sp?.todos);
+  const verJuegos = !!sp?.juegos;
+    const orden = ["precio_asc", "precio_desc", "nombre"].includes(sp?.orden) ? sp.orden : "recientes";
+    const catalogo = !!(cat || q || pag > 1 || sp?.todos || verJuegos);
   const aj = await obtenerAjustes();
 
   const conteo = await sql`
@@ -122,6 +142,8 @@ export default async function Home({ searchParams }) {
     const nombresCat = cat ? nombresDeGrupo(cat, nombresTodos) : null;
 
     let lista = [];
+    let total = 0;
+    let paginas = 1;
   let hayMas = false;
   let destacados = [];
   let novedades = [];
@@ -129,9 +151,11 @@ export default async function Home({ searchParams }) {
   let juegos = [];
 
   if (catalogo) {
-      const prods = await traerProductos({ nombres: nombresCat, q, limite: POR + 1, offset: (pag - 1) * POR });
+      const prods = verJuegos ? [] : await traerProductos({ nombres: nombresCat, q, orden, limite: POR + 1, offset: (pag - 1) * POR });
       hayMas = prods.length > POR;
       lista = prods.slice(0, POR);
+      total = verJuegos ? 0 : await contarProductos({ nombres: nombresCat, q });
+      paginas = Math.max(pag, Math.ceil(total / POR));
     } else {
       destacados = await traerProductos({ soloDestacados: true, limite: 8 });
       const vistos = new Set(destacados.map((p) => p.slug));
@@ -165,16 +189,17 @@ export default async function Home({ searchParams }) {
         and (${q}::text is null or central_one_family_name ilike '%' || ${q} || '%')
       group by central_one_family_id
       order by count(*) desc
-      limit 24
+      limit ${verJuegos ? 500 : 24}
     `;
   }
 
-  const href = (n) => {
+  const href = (n, o = orden) => {
     const s = new URLSearchParams();
     if (cat) s.set("cat", cat);
     if (q) s.set("q", q);
     if (!cat && !q) s.set("todos", "1");
-    if (n > 1) s.set("pag", String(n));
+    if (o !== "recientes") s.set("orden", o);
+      if (n > 1) s.set("pag", String(n));
     return "/?" + s.toString();
   };
 
@@ -365,7 +390,7 @@ export default async function Home({ searchParams }) {
                 <h2 className="mt-1 text-xl font-extrabold text-marino">
                   {q
                     ? `Resultados para "${q}"`
-                    : cat || "Catálogo completo"}
+                    : verJuegos ? "Recargas de juegos" : cat || "Catálogo completo"}
                 </h2>
 
                 {cat && q && (
@@ -384,14 +409,45 @@ export default async function Home({ searchParams }) {
             </div>
 
             {juegos.length > 0 && <FilaJuegos juegos={juegos} />}
-            {lista.length === 0 && juegos.length === 0 ? (
+            {!verJuegos && lista.length > 0 && (
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-neutral-500">
+                    {total} {total === 1 ? "producto" : "productos"}
+                  </p>
+                  <div className="flex gap-1.5 overflow-x-auto">
+                    {[["recientes", "Recientes"], ["precio_asc", "Menor precio"], ["precio_desc", "Mayor precio"], ["nombre", "A-Z"]].map(([v, t]) => (
+                      <Link
+                        key={v}
+                        href={href(1, v)}
+                        className={"shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold " + (orden === v ? "border-intenso bg-intenso text-white" : "border-neutral-200 text-marino")}
+                      >
+                        {t}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {lista.length === 0 && juegos.length === 0 ? (
               <div className="mt-5 rounded-2xl border border-neutral-200 bg-neutral-50 px-5 py-10 text-center">
                 <FiSearch className="mx-auto h-9 w-9 text-neutral-400" />
                 <h3 className="mt-3 font-bold text-marino">
                   No encontramos productos
                 </h3>
                 <p className="mt-2 text-sm text-neutral-500">
-                  Prueba con otra búsqueda o explora el catálogo.
+                  Prueba con otra búsqueda o explora una categoría.
+                  </p>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {cats.map((c) => (
+                      <Link key={c.categoria} href={`/?cat=${encodeURIComponent(c.categoria)}`} className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-marino">
+                        {c.categoria}
+                      </Link>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-xs text-neutral-500">
+                    ¿No encuentras lo que buscas?{" "}
+                    {limpiarWhatsapp(aj.whatsapp) && (
+                      <a href={`https://wa.me/${limpiarWhatsapp(aj.whatsapp)}`} className="font-bold text-intenso">Escríbenos por WhatsApp</a>
+                    )}
                 </p>
                 <Link
                   href="/?todos=1"
@@ -422,7 +478,7 @@ export default async function Home({ searchParams }) {
                 )}
 
                 <span className="text-xs font-semibold text-neutral-500">
-                  Página {pag}
+                  Página {pag} de {paginas}
                 </span>
 
                 {hayMas ? (
