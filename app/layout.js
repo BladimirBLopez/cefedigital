@@ -8,6 +8,7 @@ import NotificacionRuta from "@/components/NotificacionRuta";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
+  metadataBase: new URL("https://www.cefedigital.shop"),
   title: { default: "Cefe Digital | Licencias, streaming y recargas", template: "%s | Cefe Digital" },
   description: "Licencias, streaming y recargas con entrega rápida.",
   openGraph: { title: "Cefe Digital", description: "Licencias, streaming y recargas con entrega rápida.", type: "website", locale: "es_BO" },
