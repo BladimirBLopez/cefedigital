@@ -67,6 +67,9 @@ export default async function CentralOne({ searchParams }) {
         {sp?.error === "sync" && (
           <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             No se pudo sincronizar. Revisa la conexión, la clave API y el BCB.
+            {sp?.detalle && (
+              <span className="mt-1 block font-mono text-xs">Motivo: {String(sp.detalle)}</span>
+            )}
           </p>
         )}
 
@@ -93,6 +96,20 @@ export default async function CentralOne({ searchParams }) {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h2 className="font-semibold text-marino">Variables</h2>
+          <ul className="mt-2 space-y-1 text-sm text-neutral-600">
+            {[
+              ["CO_API_KEY", process.env.CO_API_KEY ? (String(process.env.CO_API_KEY).trim().startsWith("co_live_") ? "ok" : "formato") : "falta"],
+              ["CENTRAL_ONE_WEBHOOK_SECRET", process.env.CENTRAL_ONE_WEBHOOK_SECRET ? "ok" : "falta"],
+              ["CRON_SECRET", process.env.CRON_SECRET ? "ok" : "falta"],
+              ["Clave de cifrado de códigos", /^[a-f0-9]{64}$/i.test(process.env.CENTRAL_ONE_CODES_SECRET || process.env.STREAMZONE_CREDENTIALS_SECRET || "") ? "ok" : "falta"]
+            ].map(([n, e]) => (
+              <li key={n}>{n}: {e === "ok" ? "✔ Configurada" : e === "formato" ? "⚠ Formato incorrecto" : "✘ Falta"}</li>
+            ))}
+          </ul>
         </section>
 
         <section className="rounded-2xl border border-neutral-200 bg-white p-5">

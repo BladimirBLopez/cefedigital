@@ -15,7 +15,10 @@ export async function sincronizarCentralOneAction() {
     resultado = await sincronizarCatalogoCentralOne();
   } catch (error) {
     console.error("Sincronización Central One:", error);
-    redirect("/admin/proveedores/central-one?error=sync");
+    const detalle = String(error?.message || "desconocido")
+      .replace(/co_live_\w+/g, "co_live_***")
+      .slice(0, 160);
+    redirect("/admin/proveedores/central-one?error=sync&detalle=" + encodeURIComponent(detalle));
   }
 
   revalidatePath("/admin/proveedores/central-one");
