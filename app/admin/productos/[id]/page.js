@@ -6,6 +6,7 @@ import AdminNav from "@/components/AdminNav";
 import SubirFoto from "@/components/SubirFoto";
 import CamposProducto from "@/components/CamposProducto";
 import SelectorCategoria from "@/components/SelectorCategoria";
+import Interruptor from "@/components/Interruptor";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
 import { editarProducto } from "../../actions";
@@ -19,6 +20,11 @@ const rotulo = "block text-xs font-medium text-neutral-500";
 const titulo = "text-sm font-semibold text-marino";
 
 const TIPOS = { clave: "Clave o licencia", cuenta: "Cuenta con planes", recarga: "Recarga con ID" };
+const PROVEEDORES = {
+  streamzone: { texto: "StreamZone", clase: "bg-sky-100 text-sky-700" },
+  central_one: { texto: "Central One", clase: "bg-violet-100 text-violet-700" },
+};
+const PROPIO = { texto: "Propio", clase: "bg-emerald-100 text-emerald-700" };
 
 const ERRORES = {
   nombre: "Falta el nombre",
@@ -29,6 +35,27 @@ const ERRORES = {
   imagen: "La imagen debe empezar con https://",
 };
 
+const bs = (n) => "Bs " + Number(n || 0).toFixed(2);
+
+function Kpi({ t, v, s }) {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-3 text-center">
+      <p className="text-[11px] text-neutral-500">{t}</p>
+      <p className="mt-0.5 text-sm font-semibold text-marino">{v}</p>
+      {s ? <p className="text-[10px] text-neutral-500">{s}</p> : null}
+    </div>
+  );
+}
+
+function Dato({ k, v }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] text-neutral-500">{k}</dt>
+      <dd className="truncate font-medium text-neutral-800">{v}</dd>
+    </div>
+  );
+}
+
 export default async function EditarProducto({ params, searchParams }) {
   await requireAdmin();
   await asegurarEsquema();
@@ -38,7 +65,13 @@ export default async function EditarProducto({ params, searchParams }) {
   if (!Number.isInteger(id)) notFound();
   const r = await sql`
     select id, nombre, categoria, descripcion, precio::float as precio, imagen_url,
-           instrucciones, tipo, tipo_manual, campo_cliente, vence::text as vence, duracion_dias, activo, proveedor, proveedor_codigo, costo_proveedor_cop::float as costo_proveedor_cop, costo_proveedor_bs::float as costo_proveedor_bs, costo_proveedor_usd::float as costo_proveedor_usd, costo_proveedor_bs_central_one::float as costo_proveedor_bs_central_one, tipo_cambio_cop_bs::float as tipo_cambio_cop_bs, margen_porcentaje::float as margen_porcentaje, precio_sugerido::float as precio_sugerido, precio_manual, proveedor_disponible, stock_proveedor
+           instrucciones, tipo, tipo_manual, campo_cliente, vence::text as vence, duracion_dias, activo, proveedor, proveedor_codigo,
+           costo_proveedor_cop::float as costo_proveedor_cop, costo_proveedor_bs::float as costo_proveedor_bs,
+           costo_proveedor_usd::float as costo_proveedor_usd, costo_proveedor_bs_central_one::float as costo_proveedor_bs_central_one,
+           tipo_cambio_cop_bs::float as tipo_cambio_cop_bs, margen_porcentaje::float as margen_porcentaje,
+           precio_sugerido::float as precio_sugerido, precio_manual, proveedor_disponible, stock_proveedor,
+           central_one_region, central_one_family_name, central_one_requires_target,
+           to_char(sincronizado_proveedor_en at time zone 'America/La_Paz', 'DD/MM/YYYY HH24:MI') as sync
     from productos where id = ${id}`;
   const p = r[0];
   if (!p) notFound();
@@ -55,25 +88,80 @@ export default async function EditarProducto({ params, searchParams }) {
       select categoria, 9999 from productos where categoria is not null
     ) t group by categoria order by min(orden), categoria`;
 
+  const etiqueta = PROVEEDORES[p.proveedor] || PROPIO;
+  const volver = "/admin/productos?prov=" + (PROVEEDORES[p.proveedor] ? p.proveedor : "propio");
+  const costo =
+    p.proveedor === "streamzone" ? p.costo_proveedor_bs
+    : p.proveedor === "central_one" ? p.costo_proveedor_bs_central_one
+    : null;
+  const ganancia = costo > 0 ? p.precio - costo : null;
+  const sobreCosto = costo > 0 ? Math.round((ganancia / costo) * 100) : null;
+  const stockTxt = p.proveedor_disponible ? String(p.stock_proveedor ?? "Disponible") : "Sin stock";
+
   return (
     <>
       <AdminNav />
       <main className="mx-auto max-w-2xl px-4 py-6">
-        <Link href="/admin/productos" className="text-xs text-marino hover:underline">← Productos</Link>
-        <div className="flex items-start justify-between gap-2 mt-2 mb-4">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold truncate">{p.nombre}</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              {p.activo ? "A la venta" : "Oculto"} · {TIPOS[p.tipo] || p.tipo}
-            </p>
-          </div>
-          {ev.clave !== "sin" && (
-            <span className={"shrink-0 text-xs rounded-full px-2 py-0.5 " + ev.clase}>{ev.texto}</span>
+        <Link href={volver} className="text-xs text-marino hover:underline">← Productos · {etiqueta.texto}</Link>
+
+        <div className="mt-2 mb-4 flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3">
+          {p.imagen_url ? (
+            <img src={p.imagen_url} alt="" className="h-14 w-14 shrink-0 rounded-xl bg-neutral-100 object-cover" />
+          ) : (
+            <div className="h-14 w-14 shrink-0 rounded-xl bg-neutral-100" />
           )}
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-semibold">{p.nombre}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className={"rounded-full px-2 py-0.5 text-[11px] font-medium " + etiqueta.clase}>{etiqueta.texto}</span>
+              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">{TIPOS[p.tipo] || p.tipo}</span>
+              {ev.clave !== "sin" && (
+                <span className={"rounded-full px-2 py-0.5 text-[11px] " + ev.clase}>{ev.texto}</span>
+              )}
+            </div>
+          </div>
+          <div className="shrink-0 text-center">
+            <Interruptor id={p.id} activo={p.activo} />
+            <p className="mt-1 text-[10px] text-neutral-500">{p.activo ? "A la venta" : "Oculto"}</p>
+          </div>
+        </div>
+
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <Kpi t={planes.length > 0 ? "Desde" : "Precio"} v={bs(p.precio)} />
+          <Kpi t="Costo" v={costo > 0 ? bs(costo) : "—"} />
+          <Kpi t="Ganancia" v={ganancia !== null ? bs(ganancia) : "—"} s={sobreCosto !== null ? sobreCosto + "% sobre costo" : ""} />
         </div>
 
         {ERRORES[sp?.error] && (
           <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ERRORES[sp.error]}</p>
+        )}
+
+        {p.proveedor && (
+          <section className={tarjeta + " mb-4"}>
+            <h2 className={titulo}>Datos del proveedor · {etiqueta.texto}</h2>
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+              <Dato k="Código" v={p.proveedor_codigo || "—"} />
+              <Dato k="Disponibilidad" v={stockTxt} />
+              {p.proveedor === "streamzone" && (
+                <>
+                  <Dato k="Costo COP" v={Number(p.costo_proveedor_cop || 0).toFixed(2)} />
+                  <Dato k="Costo Bs" v={Number(p.costo_proveedor_bs || 0).toFixed(4)} />
+                </>
+              )}
+              {p.proveedor === "central_one" && (
+                <>
+                  <Dato k="Juego" v={p.central_one_family_name || "—"} />
+                  <Dato k="Región" v={p.central_one_region || "General"} />
+                  <Dato k="Costo USD" v={Number(p.costo_proveedor_usd || 0).toFixed(4)} />
+                  <Dato k="Costo Bs" v={Number(p.costo_proveedor_bs_central_one || 0).toFixed(4)} />
+                  <Dato k="Pide datos del jugador" v={p.central_one_requires_target ? "Sí" : "No"} />
+                </>
+              )}
+              <Dato k="Precio sugerido" v={bs(p.precio_sugerido)} />
+              <Dato k="Precio" v={p.precio_manual ? "Manual protegido" : "Automático " + Number(p.margen_porcentaje || 20) + "%"} />
+              <Dato k="Última sincronización" v={p.sync || "—"} />
+            </dl>
+          </section>
         )}
 
         <form action={editarProducto} className="space-y-4">
@@ -102,22 +190,9 @@ export default async function EditarProducto({ params, searchParams }) {
               <label className={rotulo}>
                 {planes.length > 0 ? "Precio desde (Bs)" : "Precio de venta (Bs)"}
                 <input name="precio" required inputMode="decimal" defaultValue={p.precio} readOnly={planes.length > 0} className={campo + " mt-1" + (planes.length > 0 ? " opacity-60" : "")} />
-                {p.proveedor === "streamzone" && (
+                {p.proveedor && (
                   <span className="mt-1 block text-[11px] leading-5 text-neutral-500">
-                    Costo: COP {Number(p.costo_proveedor_cop || 0).toFixed(2)} · Bs {Number(p.costo_proveedor_bs || 0).toFixed(4)} ·
-                    Precio sugerido: Bs {Number(p.precio_sugerido || 0).toFixed(2)} ·
-                    {p.precio_manual ? "Precio manual protegido" : `Margen automático ${Number(p.margen_porcentaje || 20)}%`}
-                    {p.proveedor_disponible ? ` · Stock: ${p.stock_proveedor ?? "Disponible"}` : " · Sin stock"}
-                    . Para recuperar el precio automático, coloca el precio sugerido y guarda.
-                  </span>
-                )}
-                {p.proveedor === "central_one" && (
-                  <span className="mt-1 block text-[11px] leading-5 text-neutral-500">
-                    Costo: USD {Number(p.costo_proveedor_usd || 0).toFixed(4)} · Bs {Number(p.costo_proveedor_bs_central_one || 0).toFixed(4)} ·
-                    Precio sugerido: Bs {Number(p.precio_sugerido || 0).toFixed(2)} ·
-                    {p.precio_manual ? "Precio manual protegido" : `Margen automático ${Number(p.margen_porcentaje || 20)}%`}
-                    {p.proveedor_disponible ? ` · Stock: ${p.stock_proveedor ?? "Disponible"}` : " · Sin stock"}
-                    . Para recuperar el precio automático, coloca el precio sugerido y guarda.
+                    Para volver al precio automático, pon el precio sugerido ({bs(p.precio_sugerido)}) y guarda.
                   </span>
                 )}
               </label>
@@ -142,7 +217,7 @@ export default async function EditarProducto({ params, searchParams }) {
           </section>
 
           <div className="sticky bottom-0 -mx-4 flex gap-3 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
-            <Link href="/admin/productos" className="rounded-xl border border-neutral-300 px-5 py-3 text-center font-semibold text-neutral-600">Volver</Link>
+            <Link href={volver} className="rounded-xl border border-neutral-300 px-5 py-3 text-center font-semibold text-neutral-600">Volver</Link>
             <button className="flex-1 rounded-xl bg-intenso hover:bg-marino text-white font-semibold py-3">Guardar cambios</button>
           </div>
         </form>
