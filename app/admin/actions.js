@@ -314,3 +314,34 @@ export async function editarProducto(formData) {
   revalidatePath("/admin/registro");
   redirect(`${base}?aviso=producto_actualizado`);
 }
+
+
+export async function publicarLista(formData) {
+  await requireAdmin();
+
+  const ids = formData.getAll("ids").map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 200);
+  let volver = String(formData.get("volver") || "/admin/productos");
+  if (!volver.startsWith("/admin/productos")) volver = "/admin/productos";
+
+  if (!ids.length || formData.get("confirmo") !== "on") redirect(volver);
+
+  const json = JSON.stringify(ids);
+
+  const r = await sql`
+    update productos
+    set activo = true
+    where id in (select jsonb_array_elements_text(${json}::jsonb)::bigint)
+      and not activo
+      and precio > 0
+      and (proveedor is null or proveedor_disponible = true)
+    returning id`;
+
+  if (r.length) {
+    await anotar("activar", "producto", r[0].id, "Puso a la venta " + r.length + " producto(s) en bloque");
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin/productos");
+
+  redirect(volver + (volver.includes("?") ? "&" : "?") + "publicados=" + r.length);
+}

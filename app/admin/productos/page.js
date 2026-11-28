@@ -6,7 +6,7 @@ import SubirFoto from "@/components/SubirFoto";
 import CamposProducto from "@/components/CamposProducto";
 import { asegurarEsquema } from "@/lib/esquema";
 import { estadoVence } from "@/lib/vence";
-import { crearProducto } from "../actions";
+import { crearProducto, publicarLista } from "../actions";
 import Interruptor from "@/components/Interruptor";
 import EstrellaDestacado from "@/components/EstrellaDestacado";
 import SwitchVenta from "@/components/SwitchVenta";
@@ -35,6 +35,7 @@ export default async function Productos({ searchParams }) {
   const q = String(sp?.q || "").trim().toLowerCase();
   const estado = ["venta", "oculto", "vencen"].includes(sp?.estado) ? sp.estado : "todos";
   const cats = String(sp?.cat || "").split("|").map((c) => c.trim()).filter(Boolean);
+  const prov = ["central_one", "streamzone", "propio"].includes(sp?.prov) ? sp.prov : "todos";
 
   const POR_PAGINA = 40;
   const pagina = Math.max(1, Number.parseInt(sp?.pag, 10) || 1);
@@ -68,6 +69,7 @@ export default async function Productos({ searchParams }) {
       and (${estado} <> 'venta' or p.activo)
       and (${estado} <> 'oculto' or not p.activo)
       and (${estado} <> 'vencen' or p.vence is not null)
+      and (${prov} = 'todos' or (${prov} = 'propio' and p.proveedor is null) or p.proveedor = ${prov})
     order by p.id desc
     limit ${estado === "vencen" ? 5000 : POR_PAGINA + 1}
     offset ${estado === "vencen" ? 0 : (pagina - 1) * POR_PAGINA}`;
@@ -75,9 +77,20 @@ export default async function Productos({ searchParams }) {
   const hayMas = estado !== "vencen" && filas.length > POR_PAGINA;
   const lista = estado === "vencen" ? filas.filter(vencen) : filas.slice(0, POR_PAGINA);
 
+  const publicables = lista.filter((p) => !p.activo && p.precio > 0 && (!p.proveedor || p.proveedor_disponible));
+  const hrefProv = (v) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (estado !== "todos") u.set("estado", estado);
+    if (cats.length) u.set("cat", cats.join("|"));
+    if (v !== "todos") u.set("prov", v);
+    const t = u.toString();
+    return "/admin/productos" + (t ? "?" + t : "");
+  };
   const hrefPag = (n) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
+    if (prov !== "todos") u.set("prov", prov);
     if (estado !== "todos") u.set("estado", estado);
     if (cats.length) u.set("cat", cats.join("|"));
     if (n > 1) u.set("pag", String(n));
@@ -88,6 +101,7 @@ export default async function Productos({ searchParams }) {
   const href = (e) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
+    if (prov !== "todos") u.set("prov", prov);
     if (e !== "todos") u.set("estado", e);
     if (cats.length) u.set("cat", cats.join("|"));
     const s = u.toString();
@@ -103,6 +117,7 @@ export default async function Productos({ searchParams }) {
   const hrefCat = (c) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
+    if (prov !== "todos") u.set("prov", prov);
     if (estado !== "todos") u.set("estado", estado);
     const nuevas = c === null ? [] : cats.includes(c) ? cats.filter((x) => x !== c) : [...cats, c];
     if (nuevas.length) u.set("cat", nuevas.join("|"));
@@ -143,10 +158,26 @@ export default async function Productos({ searchParams }) {
 
         <form method="get" className="flex gap-2 mb-3">
           {estado !== "todos" && <input type="hidden" name="estado" value={estado} />}
+          {prov !== "todos" && <input type="hidden" name="prov" value={prov} />}
           {cats.length > 0 && <input type="hidden" name="cat" value={cats.join("|")} />}
           <input name="q" defaultValue={q} placeholder="Buscar producto o categoría" className={campo + " !py-2"} />
           <button className="rounded-xl bg-marino text-white px-4 text-sm">Buscar</button>
         </form>
+
+        <div className="flex gap-2 overflow-x-auto mb-2">
+          {[["todos", "Todos los proveedores"], ["central_one", "Central One"], ["streamzone", "StreamZone"], ["propio", "Propios"]].map(([v, t]) => (
+            <Link
+              key={v}
+              href={hrefProv(v)}
+              className={
+                "shrink-0 rounded-full px-3 py-1 text-sm border " +
+                (prov === v ? "bg-intenso text-white border-intenso" : "bg-white border-neutral-300 text-neutral-600")
+              }
+            >
+              {t}
+            </Link>
+          ))}
+        </div>
 
         <div className="flex gap-2 overflow-x-auto mb-4">
           {chips.map(([e, t]) => (
@@ -190,6 +221,26 @@ export default async function Productos({ searchParams }) {
               ))}
             </div>
           </div>
+        )}
+
+        {sp?.publicados != null && (
+          <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            Se pusieron a la venta {Number(sp.publicados) || 0} producto(s).
+          </p>
+        )}
+
+        {publicables.length > 0 && (
+          <form action={publicarLista} className="mb-4 rounded-2xl border border-neutral-200 bg-white p-3 space-y-2">
+            {publicables.map((p) => <input key={p.id} type="hidden" name="ids" value={p.id} />)}
+            <input type="hidden" name="volver" value={hrefPag(pagina)} />
+            <label className="flex items-center gap-2 text-xs text-neutral-600">
+              <input type="checkbox" name="confirmo" required />
+              Confirmo que revisé los precios de esta página
+            </label>
+            <button className="w-full rounded-xl bg-intenso px-4 py-3 text-sm font-semibold text-white hover:bg-marino">
+              Publicar los {publicables.length} de esta página
+            </button>
+          </form>
         )}
 
         <ul className="space-y-3">
