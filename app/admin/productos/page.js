@@ -36,27 +36,54 @@ export default async function Productos({ searchParams }) {
   const estado = ["venta", "oculto", "vencen"].includes(sp?.estado) ? sp.estado : "todos";
   const cats = String(sp?.cat || "").split("|").map((c) => c.trim()).filter(Boolean);
 
-  const todos = await sql`
-    select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.destacado, p.vence::text as vence,
-      p.precio::float as precio, p.activo, p.proveedor, p.costo_proveedor_bs::float as costo_proveedor_bs, p.costo_proveedor_bs_central_one::float as costo_proveedor_bs_central_one, p.precio_sugerido::float as precio_sugerido, p.margen_porcentaje::float as margen_porcentaje, p.precio_manual, p.proveedor_disponible, p.stock_proveedor
-    from productos p order by p.id desc`;
+  const POR_PAGINA = 40;
+  const pagina = Math.max(1, Number.parseInt(sp?.pag, 10) || 1);
+  const patron = q ? "%" + q.replace(/[%_\\]/g, "") + "%" : null;
+  const catsJson = JSON.stringify(cats);
 
   const vencen = (p) => ["vencido", "pronto"].includes(estadoVence(p.vence).clave);
+
+  const [conteo] = await sql`
+    select count(*)::int as total,
+           count(*) filter (where activo)::int as venta,
+           count(*) filter (where not activo)::int as oculto
+    from productos`;
+  const conVence = await sql`select vence::text as vence from productos where vence is not null`;
+  const categoriasProductos = await sql`
+    select distinct coalesce(categoria, 'Sin categoría') as categoria from productos`;
+
   const stats = {
-    total: todos.length,
-    venta: todos.filter((p) => p.activo).length,
-    vencen: todos.filter(vencen).length,
-    oculto: todos.filter((p) => !p.activo).length,
+    total: conteo.total,
+    venta: conteo.venta,
+    oculto: conteo.oculto,
+    vencen: conVence.filter(vencen).length,
   };
 
-  const lista = todos.filter((p) => {
-    if (q && !`${p.nombre} ${p.categoria || ""}`.toLowerCase().includes(q)) return false;
-    if (cats.length && !cats.includes(p.categoria || "Sin categoría")) return false;
-    if (estado === "venta") return p.activo;
-    if (estado === "oculto") return !p.activo;
-    if (estado === "vencen") return vencen(p);
-    return true;
-  });
+  const filas = await sql`
+    select p.id, p.nombre, p.categoria, p.tipo, p.imagen_url, p.destacado, p.vence::text as vence,
+      p.precio::float as precio, p.activo, p.proveedor, p.costo_proveedor_bs::float as costo_proveedor_bs, p.costo_proveedor_bs_central_one::float as costo_proveedor_bs_central_one, p.precio_sugerido::float as precio_sugerido, p.margen_porcentaje::float as margen_porcentaje, p.precio_manual, p.proveedor_disponible, p.stock_proveedor
+    from productos p
+    where (${patron}::text is null or lower(p.nombre || ' ' || coalesce(p.categoria, '')) like ${patron})
+      and (${cats.length}::int = 0 or coalesce(p.categoria, 'Sin categoría') in (select jsonb_array_elements_text(${catsJson}::jsonb)))
+      and (${estado} <> 'venta' or p.activo)
+      and (${estado} <> 'oculto' or not p.activo)
+      and (${estado} <> 'vencen' or p.vence is not null)
+    order by p.id desc
+    limit ${estado === "vencen" ? 5000 : POR_PAGINA + 1}
+    offset ${estado === "vencen" ? 0 : (pagina - 1) * POR_PAGINA}`;
+
+  const hayMas = estado !== "vencen" && filas.length > POR_PAGINA;
+  const lista = estado === "vencen" ? filas.filter(vencen) : filas.slice(0, POR_PAGINA);
+
+  const hrefPag = (n) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (estado !== "todos") u.set("estado", estado);
+    if (cats.length) u.set("cat", cats.join("|"));
+    if (n > 1) u.set("pag", String(n));
+    const t = u.toString();
+    return "/admin/productos" + (t ? "?" + t : "");
+  };
 
   const href = (e) => {
     const u = new URLSearchParams();
@@ -71,7 +98,7 @@ export default async function Productos({ searchParams }) {
   `;
   const categorias = [...new Set([
     ...categoriasRegistradas.map((c) => c.categoria),
-    ...todos.map((p) => p.categoria || "Sin categoría")
+    ...categoriasProductos.map((c) => c.categoria)
   ])].filter(Boolean).sort((a, b) => a.localeCompare(b, "es"));
   const hrefCat = (c) => {
     const u = new URLSearchParams();
@@ -223,6 +250,13 @@ export default async function Productos({ searchParams }) {
             );
           })}
         </ul>
+              {estado !== "vencen" && (pagina > 1 || hayMas) && (
+          <nav className="mt-4 flex items-center justify-between text-sm">
+            {pagina > 1 ? <Link href={hrefPag(pagina - 1)} className="text-marino hover:underline">← Anterior</Link> : <span />}
+            <span className="text-neutral-500">Página {pagina}</span>
+            {hayMas ? <Link href={hrefPag(pagina + 1)} className="text-marino hover:underline">Siguiente →</Link> : <span />}
+          </nav>
+        )}
       </main>
     </>
   );
